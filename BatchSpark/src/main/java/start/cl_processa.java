@@ -17,7 +17,7 @@ import org.apache.spark.sql.SparkSession;
 
 public class cl_processa {
 	
-	final static String gv_table = "JSON6";
+	final static String gv_table = "JSON8";
 	final static String gv_zkurl = "localhost:2181";
 	
 	final static String gc_conn = "CONN";
@@ -80,8 +80,8 @@ public class cl_processa {
 		System.out.println("Conexões TOTAL: \t"+lv_data.count() + "\n\n");
 		
 		m_processa_conn(lv_data);
-		m_processa_dns(lv_data);
-		m_processa_http(lv_data);
+		//m_processa_dns(lv_data);
+		//m_processa_http(lv_data);
 		
 	}
 	
@@ -130,7 +130,7 @@ public class cl_processa {
 		
 		System.out.println("Conexões CONN: \t"+lv_conn.count());
 		
-		lv_conn.show();
+		lv_conn.show(1000);
 		
 	}
 	

@@ -3,7 +3,6 @@ package start;
 import static org.apache.spark.sql.functions.col;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Level;
@@ -14,16 +13,23 @@ import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import static org.apache.spark.sql.functions.col;
 
 public class cl_processa {
-	
-	final static String gv_table = "JSON8";
+
+//---------CONSTANTES---------//
+	final static String gv_table = "JSON9";
 	final static String gv_zkurl = "localhost:2181";
 	
 	final static String gc_conn = "CONN";
 	final static String gc_dns  = "DNS";
 	final static String gc_http = "HTTP";
 	
+	final static String gc_stamp = "2018-11-25 15:53:00.000";
+	
+	final static String gc_path_r = "/home/user/Documentos/batch_spark/";
+	
+//---------ATRIBUTOS---------//
 	private static cl_processa gv_processa;
 
 	private static Map<String, String> gv_phoenix;
@@ -57,7 +63,7 @@ public class cl_processa {
 		gv_phoenix.put("hbase.zookeeper.quorum", "master");
 		gv_phoenix.put("table", gv_table);
 		
-		gv_conf = new SparkConf().setMaster("local[2]").setAppName("SelectLog");
+		gv_conf = new SparkConf().setMaster("local[4]").setAppName("SelectLog");
 		
 		gv_context = new SparkContext(gv_conf);
 		
@@ -67,25 +73,43 @@ public class cl_processa {
 	}
 	
 	public void m_seleciona() throws AnalysisException {
-							
+		
 		Dataset<Row> lv_data = gv_session
 							   .sqlContext()
 							   .read()
 							   .format("org.apache.phoenix.spark")
-							   .options(gv_phoenix)
-							   .load();
+							   .options(gv_phoenix)							   
+							   .load()
+							   .filter(col("TS_CODE").gt(gc_stamp));
+							   //.filter(col("TIPO").equalTo(gc_dns));
 		
 		//lv_data.createOrReplaceTempView(gv_table); //cria uma tabela temporaria, para acessar via SQL
 		
 		System.out.println("Conexões TOTAL: \t"+lv_data.count() + "\n\n");
 		
-		m_processa_conn(lv_data);
-		//m_processa_dns(lv_data);
+		Dataset<Row> lv_conn;
+		Dataset<Row> lv_dns;
+		Dataset<Row> lv_query;
+			
+		lv_conn = m_processa_conn(lv_data);
+		
+		lv_conn.printSchema();
+		
+		lv_dns = m_processa_dns(lv_data);
+		
+		lv_query = m_dns_query(lv_dns);
+		
+		lv_query.printSchema();
+		
+		lv_query.show();
+		
+		m_get_conn_query(lv_conn, lv_query);
+		
 		//m_processa_http(lv_data);
 		
 	}
 	
-	public void m_processa_conn(Dataset<Row> lv_data) throws AnalysisException {
+	public Dataset<Row> m_processa_conn(Dataset<Row> lv_data) throws AnalysisException {
 		
 		Dataset<Row> lv_conn;	
 		
@@ -115,6 +139,13 @@ public class cl_processa {
 						  "tunnel_parents"
 						  )				  
 				  .filter(col("TIPO").equalTo(gc_conn));
+				  
+		
+		System.out.println("Conexões CONN: \t"+lv_conn.count());
+		
+		return lv_conn;
+		
+		//m_conn_consumo(lv_conn);
 		
 		/*		String lv_sql;
 		 * lv_sql = "SELECT UID, TS_CODE FROM JSON6 WHERE TIPO = 'CONN' ";
@@ -126,18 +157,28 @@ public class cl_processa {
 				.sparkSession()
 				.sql(lv_sql);*/
 						
-		lv_conn.printSchema();
+		//lv_conn.printSchema();
 		
-		System.out.println("Conexões CONN: \t"+lv_conn.count());
 		
-		lv_conn.show(1000);
+		
+		//lv_conn.show();
 		
 	}
 	
-	public void m_processa_dns(Dataset<Row> lv_data) {
+	public void m_conn_consumo(Dataset<Row> lv_conn) {
+		
+		Dataset<Row> lv_res;
+		
+		lv_res = lv_conn.sort(col("ORIG_BYTES").desc());
+		
+		lv_res.show(100);
+		
+	}
+	
+	public Dataset<Row> m_processa_dns(Dataset<Row> lv_data) {
 
 		Dataset<Row> lv_dns;
-
+		
 		lv_dns = lv_data
 				.select("TIPO",              
 						"TS_CODE",  								   	
@@ -166,12 +207,37 @@ public class cl_processa {
 						"REJECTED"  
 						)
 				.filter(col("TIPO").equalTo(gc_dns));
-		
-		lv_dns.printSchema();
-		
+						
 		System.out.println("Conexões DNS: \t"+lv_dns.count());
 		
-		lv_dns.show();
+		return lv_dns;
+		
+		//m_dns_query(lv_dns);	
+				
+		//lv_dns.printSchema();		
+		
+		//lv_dns.show(100);
+		
+	}
+	
+	public Dataset<Row> m_dns_query(Dataset<Row> lv_dns) {
+		
+		Dataset<Row> lv_res;
+
+		lv_res = lv_dns.select(col("UID"),
+							   col("ID_ORIG_H"),
+							   col("ID_RESP_H"),
+							   col("QUERY"))
+					   .filter(col("QUERY").like("%www.%")); //equalTo("www.facebook.com"))
+					   //.groupBy("QUERY")
+					   //.count().sort(col("count").desc());
+		
+		//m_save_csv(lv_res, gc_dns);
+		 
+		//lv_res.show(100);
+		
+		return lv_res;
+		
 	}
 	
 	public void m_processa_http(Dataset<Row> lv_data) {
@@ -207,6 +273,50 @@ public class cl_processa {
 		lv_http.show();
 	}
 	
+	public void m_get_conn_query(Dataset<Row> lv_conn, Dataset<Row> lv_dns) {
+		
+		Dataset<Row> lv_res;
+		
+		lv_res = lv_dns.join(lv_conn, lv_dns.col("UID").equalTo(lv_conn.col("UID")))				
+				   .select(//lv_conn.col("UID"),						   
+						   lv_conn.col("ID_ORIG_H"),
+						   //lv_conn.col("ID_ORIG_P"),  
+						   //lv_conn.col("ID_RESP_H"),  
+						   lv_conn.col("ID_RESP_H"),  
+						   //lv_conn.col("PROTO"),
+						   //lv_conn.col("SERVICE"),	
+						   //lv_conn.col("DURATION"),  
+						   //lv_conn.col("ORIG_BYTES"),
+						   //lv_conn.col("RESP_BYTES"),
+						   lv_dns.col("QUERY")
+						   )
+				   .groupBy(//lv_conn.col("UID"),
+						   lv_conn.col("ID_ORIG_H"),
+						   //lv_conn.col("ID_RESP_H"),
+						   lv_dns.col("QUERY")
+						   )
+				   .count()
+				   .sort(col("ID_ORIG_H"),
+						 col("COUNT").desc());
+				 //fazer somar os bytes e gerar poor IP o total e ver o HTTP
+				   /*.sort(lv_conn.col("RESP_BYTES").desc());
+				   .groupBy(lv_dns.col("uid"),lv_dns.col("query"))
+				   .count();*/
+		
+		m_save_csv(lv_res, "conn_query");
+	}
+
+	public void m_save_csv(Dataset<Row> lv_data, String lv_dir){
+		
+		String lv_path = gc_path_r + lv_dir;
+		
+		lv_data.coalesce(1) //cria apenas um arquivo
+	      .write()
+	      .option("header", "true")
+	      .mode("overwrite") //substitui o arquivo de resultado pelo novo			
+	      .csv(lv_path);
+		
+	}
 }
 
 

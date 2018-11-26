@@ -93,16 +93,10 @@ public class cl_processa {
 			
 		lv_conn = m_processa_conn(lv_data);
 		
-		lv_conn.printSchema();
-		
 		lv_dns = m_processa_dns(lv_data);
 		
 		lv_query = m_dns_query(lv_dns);
-		
-		lv_query.printSchema();
-		
-		lv_query.show();
-		
+				
 		m_get_conn_query(lv_conn, lv_query);
 		
 		//m_processa_http(lv_data);
@@ -228,7 +222,7 @@ public class cl_processa {
 							   col("ID_ORIG_H"),
 							   col("ID_RESP_H"),
 							   col("QUERY"))
-					   .filter(col("QUERY").like("%www.%")); //equalTo("www.facebook.com"))
+					   .filter(col("QUERY").like("%www.%")).limit(1000); //equalTo("www.facebook.com"))
 					   //.groupBy("QUERY")
 					   //.count().sort(col("count").desc());
 		
@@ -277,19 +271,19 @@ public class cl_processa {
 		
 		Dataset<Row> lv_res;
 		
-		lv_res = lv_dns.join(lv_conn, lv_dns.col("UID").equalTo(lv_conn.col("UID")))				
+		/*lv_res = lv_dns.join(lv_conn, lv_dns.col("UID").equalTo(lv_conn.col("UID")))				
 				   .select(//lv_conn.col("UID"),						   
 						   lv_conn.col("ID_ORIG_H"),
 						   //lv_conn.col("ID_ORIG_P"),  
 						   //lv_conn.col("ID_RESP_H"),  
 						   lv_conn.col("ID_RESP_H"),  
-						   //lv_conn.col("PROTO"),
+						   lv_conn.col("PROTO"),
 						   //lv_conn.col("SERVICE"),	
 						   //lv_conn.col("DURATION"),  
 						   //lv_conn.col("ORIG_BYTES"),
 						   //lv_conn.col("RESP_BYTES"),
 						   lv_dns.col("QUERY")
-						   )
+						   );
 				   .groupBy(//lv_conn.col("UID"),
 						   lv_conn.col("ID_ORIG_H"),
 						   //lv_conn.col("ID_RESP_H"),
@@ -298,12 +292,56 @@ public class cl_processa {
 				   .count()
 				   .sort(col("ID_ORIG_H"),
 						 col("COUNT").desc());
+		
+				 //fazer somar os bytes e gerar poor IP o total e ver o HTTP
+				   .sort(lv_conn.col("RESP_BYTES").desc());
+				   .groupBy(lv_dns.col("uid"),lv_dns.col("query"))
+				   .count();*/
+		
+		lv_res = lv_dns.as("dns")
+				 .filter(lv_dns.col("QUERY").equalTo("www.facebook.com"))
+				 .join(lv_conn.as("conn"), "UID")//(lv_conn, lv_dns.col("UID").equalTo(lv_conn.col("UID")));
+				 .select("UID",
+						 "conn.ID_ORIG_H",
+						 "conn.ORIG_BYTES",
+						 "QUERY");
+				   /*.select(//lv_conn.col("UID"),						   
+						   lv_conn.col("ID_ORIG_H"),
+						   //lv_conn.col("ID_ORIG_P"),  
+						   //lv_conn.col("ID_RESP_H"),  
+						   lv_conn.col("ID_RESP_H"),  
+						   lv_conn.col("PROTO"),
+						   //lv_conn.col("SERVICE"),	
+						   //lv_conn.col("DURATION"),  
+						   //lv_conn.col("ORIG_BYTES"),
+						   //lv_conn.col("RESP_BYTES"),
+						   lv_dns.col("QUERY")
+						   );*/
+				   /*.groupBy(lv_conn.col("UID"),						   
+						   lv_conn.col("ID_ORIG_H"),
+						    
+						   lv_conn.col("ID_RESP_H"),  
+						    
+						   lv_conn.col("PROTO"),
+						   lv_conn.col("SERVICE"),	
+						   lv_conn.col("DURATION"),  
+						   lv_conn.col("ORIG_BYTES"),
+						   lv_conn.col("RESP_BYTES"),
+						   lv_dns.col("QUERY")
+						   )
+				   .count();*/
+				   /*.sort(col("ID_ORIG_H"),
+						 col("COUNT").desc());*/
+		
 				 //fazer somar os bytes e gerar poor IP o total e ver o HTTP
 				   /*.sort(lv_conn.col("RESP_BYTES").desc());
 				   .groupBy(lv_dns.col("uid"),lv_dns.col("query"))
 				   .count();*/
 		
-		m_save_csv(lv_res, "conn_query");
+		lv_res.printSchema();
+		lv_res.show();
+		
+		//m_save_csv(lv_res, "conn_query");
 	}
 
 	public void m_save_csv(Dataset<Row> lv_data, String lv_dir){

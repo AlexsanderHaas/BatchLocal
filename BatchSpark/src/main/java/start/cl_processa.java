@@ -13,6 +13,8 @@ import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.functions;
+
 import static org.apache.spark.sql.functions.col;
 
 public class cl_processa {
@@ -124,13 +126,13 @@ public class cl_processa {
 						  "CONN_STATE",
 						  "LOCAL_ORIG",
 						  "LOCAL_RESP",
-						  "missed_bytes",	
-						  "history",		
-						  "orig_pkts",		
-						  "orig_ip_bytes",	
-						  "resp_pkts",		
-						  "resp_ip_bytes",  
-						  "tunnel_parents"
+						  "MISSED_BYTES",	
+						  "HISTORY",		
+						  "ORIG_PKTS",		
+						  "ORIG_IP_BYTES",	
+						  "RESP_PKTS",		
+						  "RESP_IP_BYTES",  
+						  "TUNNEL_PARENTS"
 						  )				  
 				  .filter(col("TIPO").equalTo(gc_conn));
 				  
@@ -221,7 +223,8 @@ public class cl_processa {
 		lv_res = lv_dns.select(col("UID"),
 							   col("ID_ORIG_H"),
 							   col("ID_RESP_H"),
-							   col("QUERY"))
+							   col("QUERY"),
+							   col("ANSWERS"))
 					   .filter(col("QUERY").like("%www.%")).limit(1000); //equalTo("www.facebook.com"))
 					   //.groupBy("QUERY")
 					   //.count().sort(col("count").desc());
@@ -271,53 +274,26 @@ public class cl_processa {
 		
 		Dataset<Row> lv_res;
 		
-		/*lv_res = lv_dns.join(lv_conn, lv_dns.col("UID").equalTo(lv_conn.col("UID")))				
-				   .select(//lv_conn.col("UID"),						   
-						   lv_conn.col("ID_ORIG_H"),
-						   //lv_conn.col("ID_ORIG_P"),  
-						   //lv_conn.col("ID_RESP_H"),  
-						   lv_conn.col("ID_RESP_H"),  
-						   lv_conn.col("PROTO"),
-						   //lv_conn.col("SERVICE"),	
-						   //lv_conn.col("DURATION"),  
-						   //lv_conn.col("ORIG_BYTES"),
-						   //lv_conn.col("RESP_BYTES"),
-						   lv_dns.col("QUERY")
-						   );
-				   .groupBy(//lv_conn.col("UID"),
-						   lv_conn.col("ID_ORIG_H"),
-						   //lv_conn.col("ID_RESP_H"),
-						   lv_dns.col("QUERY")
-						   )
-				   .count()
-				   .sort(col("ID_ORIG_H"),
-						 col("COUNT").desc());
+		lv_res = lv_dns.as("dns")				 
+				 .join(lv_conn.as("conn"), "UID")//(lv_conn, lv_dns.col("UID").equalTo(lv_conn.col("UID")));							  
+				 	.select("UID",
+						   "conn.ID_ORIG_H",
+						   "ID_ORIG_P",  
+						   "conn.ID_RESP_H", 
+						   "ID_RESP_P",  
+						   "PROTO",
+						   "SERVICE",	
+						   "DURATION",  
+						   "ORIG_BYTES",
+						   "RESP_BYTES",
+						   "QUERY",
+						   "ANSWERS"
+						   //"CAST(ANSWERS AS STRING)" //Converte Array para STRING assim slava em CSV
+						   )				   
+				   .sort(col("ORIG_BYTES").desc());
+				   
 		
-				 //fazer somar os bytes e gerar poor IP o total e ver o HTTP
-				   .sort(lv_conn.col("RESP_BYTES").desc());
-				   .groupBy(lv_dns.col("uid"),lv_dns.col("query"))
-				   .count();*/
-		
-		lv_res = lv_dns.as("dns")
-				 .filter(lv_dns.col("QUERY").equalTo("www.facebook.com"))
-				 .join(lv_conn.as("conn"), "UID")//(lv_conn, lv_dns.col("UID").equalTo(lv_conn.col("UID")));
-				 .select("UID",
-						 "conn.ID_ORIG_H",
-						 "conn.ORIG_BYTES",
-						 "QUERY");
-				   /*.select(//lv_conn.col("UID"),						   
-						   lv_conn.col("ID_ORIG_H"),
-						   //lv_conn.col("ID_ORIG_P"),  
-						   //lv_conn.col("ID_RESP_H"),  
-						   lv_conn.col("ID_RESP_H"),  
-						   lv_conn.col("PROTO"),
-						   //lv_conn.col("SERVICE"),	
-						   //lv_conn.col("DURATION"),  
-						   //lv_conn.col("ORIG_BYTES"),
-						   //lv_conn.col("RESP_BYTES"),
-						   lv_dns.col("QUERY")
-						   );*/
-				   /*.groupBy(lv_conn.col("UID"),						   
+				 /*.groupBy(lv_conn.col("UID"),						   
 						   lv_conn.col("ID_ORIG_H"),
 						    
 						   lv_conn.col("ID_RESP_H"),  
@@ -338,10 +314,17 @@ public class cl_processa {
 				   .groupBy(lv_dns.col("uid"),lv_dns.col("query"))
 				   .count();*/
 		
-		lv_res.printSchema();
-		lv_res.show();
 		
-		//m_save_csv(lv_res, "conn_query");
+		System.out.println("QUERY CONN: \t"+lv_res.count() + "\n\n");
+		
+		//lv_res = lv_res.withColumn("ANSWERS", functions.split(col("ANSWERS"), "[,]").cast("String"));//(col("ANSWERS"),",");//.cast("string")));
+		
+		lv_res.printSchema();
+		
+		//lv_res.show();
+		
+		m_save_csv(lv_res, "conn_query");
+		
 	}
 
 	public void m_save_csv(Dataset<Row> lv_data, String lv_dir){
@@ -352,7 +335,8 @@ public class cl_processa {
 	      .write()
 	      .option("header", "true")
 	      .mode("overwrite") //substitui o arquivo de resultado pelo novo			
-	      .csv(lv_path);
+	      .json(lv_path);
+	      //.csv(lv_path);
 		
 	}
 }

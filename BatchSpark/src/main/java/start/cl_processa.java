@@ -275,7 +275,7 @@ public class cl_processa {
 		Dataset<Row> lv_res;
 		
 		lv_res = lv_dns.as("dns")				 
-				 .join(lv_conn.as("conn"), "UID")//(lv_conn, lv_dns.col("UID").equalTo(lv_conn.col("UID")));							  
+				 .join(lv_conn.as("conn"), "UID")							  
 				 	.select("UID",
 						   "conn.ID_ORIG_H",
 						   "ID_ORIG_P",  
@@ -287,43 +287,30 @@ public class cl_processa {
 						   "ORIG_BYTES",
 						   "RESP_BYTES",
 						   "QUERY",
-						   "ANSWERS"
-						   //"CAST(ANSWERS AS STRING)" //Converte Array para STRING assim slava em CSV
+						   "ANSWERS"						   
 						   )				   
 				   .sort(col("ORIG_BYTES").desc());
 				   
-		
-				 /*.groupBy(lv_conn.col("UID"),						   
-						   lv_conn.col("ID_ORIG_H"),
-						    
-						   lv_conn.col("ID_RESP_H"),  
-						    
-						   lv_conn.col("PROTO"),
-						   lv_conn.col("SERVICE"),	
-						   lv_conn.col("DURATION"),  
-						   lv_conn.col("ORIG_BYTES"),
-						   lv_conn.col("RESP_BYTES"),
-						   lv_dns.col("QUERY")
-						   )
-				   .count();*/
-				   /*.sort(col("ID_ORIG_H"),
-						 col("COUNT").desc());*/
-		
-				 //fazer somar os bytes e gerar poor IP o total e ver o HTTP
-				   /*.sort(lv_conn.col("RESP_BYTES").desc());
-				   .groupBy(lv_dns.col("uid"),lv_dns.col("query"))
-				   .count();*/
-		
-		
+				
 		System.out.println("QUERY CONN: \t"+lv_res.count() + "\n\n");
-		
-		//lv_res = lv_res.withColumn("ANSWERS", functions.split(col("ANSWERS"), "[,]").cast("String"));//(col("ANSWERS"),",");//.cast("string")));
-		
-		lv_res.printSchema();
+						
+		//lv_res.printSchema();
 		
 		//lv_res.show();
 		
 		m_save_csv(lv_res, "conn_query");
+		
+		lv_res = lv_res.groupBy("QUERY")
+				.sum("ORIG_BYTES");
+				//.count()					   
+				//.sort(col("COUNT").desc());
+		
+		//lv_res.printSchema();
+		
+		//lv_res.show();
+		
+		m_save_csv(lv_res, "conn_query_s");
+		
 		
 	}
 

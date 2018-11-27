@@ -42,6 +42,11 @@ public class cl_processa {
 	                        
 	private static SparkSession gv_session;
 	
+	private Dataset<Row> gt_data;	
+	private Dataset<Row> gt_conn;
+	private Dataset<Row> gt_dns;
+	private Dataset<Row> gt_http;
+	
 	public static void main(String[] args) throws AnalysisException {
 	
 		gv_processa = new cl_processa();
@@ -55,6 +60,11 @@ public class cl_processa {
 		
 		m_seleciona();
 		
+		if(gt_data.count() > 0) {
+		
+			m_processa();
+
+		}
 	}
 	
 	public static void m_conecta_phoenix(){
@@ -76,35 +86,35 @@ public class cl_processa {
 	
 	public void m_seleciona() throws AnalysisException {
 		
-		Dataset<Row> lv_data = gv_session
-							   .sqlContext()
-							   .read()
-							   .format("org.apache.phoenix.spark")
-							   .options(gv_phoenix)							   
-							   .load()
-							   .filter(col("TS_CODE").gt(gc_stamp));
-							   //.filter(col("TIPO").equalTo(gc_dns));
+		gt_data = gv_session
+			      .sqlContext()
+			      .read()
+			      .format("org.apache.phoenix.spark")
+			      .options(gv_phoenix)							   
+			      .load()
+			      .filter("TIPO = 'CONN' OR TIPO = 'DNS'");//filter("TS_CODE = TO_TIMESTAMP ('"+gc_stamp+"')"); //" AND ( TIPO = 'CONN' OR TIPO = 'DNS' )");
+			      /*.filter(col("TS_CODE").gt(gc_stamp))
+			      .filter(col("TIPO").equalTo(gc_conn));*/
+							   
 		
 		//lv_data.createOrReplaceTempView(gv_table); //cria uma tabela temporaria, para acessar via SQL
 		
-		System.out.println("Conexões TOTAL: \t"+lv_data.count() + "\n\n");
-		
-		Dataset<Row> lv_conn;
-		Dataset<Row> lv_dns;
-		Dataset<Row> lv_query;
-			
-		lv_conn = m_processa_conn(lv_data);
-		
-		lv_dns = m_processa_dns(lv_data);
-		
-		lv_query = m_dns_query(lv_dns);
+		System.out.println("Conexões TOTAL: \t"+gt_data.count() + "\n\n");
 				
-		m_get_conn_query(lv_conn, lv_query);
-		
-		//m_processa_http(lv_data);
-		
 	}
 	
+	public void m_processa() throws AnalysisException {
+				
+		gt_conn = m_processa_conn(gt_data);
+
+		gt_dns = m_processa_dns(gt_data);
+		
+		// gt_http = m_processa_http(lv_data);
+		
+		m_get_www_info(); //Exporta totais da conexão por filtro de WWW
+		
+
+	}
 	public Dataset<Row> m_processa_conn(Dataset<Row> lv_data) throws AnalysisException {
 		
 		Dataset<Row> lv_conn;	
@@ -153,21 +163,7 @@ public class cl_processa {
 				.sparkSession()
 				.sql(lv_sql);*/
 						
-		//lv_conn.printSchema();
-		
-		
-		
-		//lv_conn.show();
-		
-	}
-	
-	public void m_conn_consumo(Dataset<Row> lv_conn) {
-		
-		Dataset<Row> lv_res;
-		
-		lv_res = lv_conn.sort(col("ORIG_BYTES").desc());
-		
-		lv_res.show(100);
+		//m_show_dataset(lv_conn);
 		
 	}
 	
@@ -208,40 +204,15 @@ public class cl_processa {
 		
 		return lv_dns;
 		
-		//m_dns_query(lv_dns);	
-				
-		//lv_dns.printSchema();		
-		
-		//lv_dns.show(100);
+		//m_show_dataset(lv_dns);
 		
 	}
-	
-	public Dataset<Row> m_dns_query(Dataset<Row> lv_dns) {
-		
-		Dataset<Row> lv_res;
+			
+	public Dataset<Row> m_processa_http(Dataset<Row> lv_data) {
 
-		lv_res = lv_dns.select(col("UID"),
-							   col("ID_ORIG_H"),
-							   col("ID_RESP_H"),
-							   col("QUERY"),
-							   col("ANSWERS"))
-					   .filter(col("QUERY").like("%www.%")).limit(1000); //equalTo("www.facebook.com"))
-					   //.groupBy("QUERY")
-					   //.count().sort(col("count").desc());
-		
-		//m_save_csv(lv_res, gc_dns);
-		 
-		//lv_res.show(100);
-		
-		return lv_res;
-		
-	}
-	
-	public void m_processa_http(Dataset<Row> lv_data) {
+		Dataset<Row> lt_http;
 
-		Dataset<Row> lv_http;
-
-		lv_http = lv_data
+		lt_http = lv_data
 				  .select("TIPO",              
 						"TS_CODE",  								   	
 						"TS",         
@@ -261,17 +232,57 @@ public class cl_processa {
 						"RESP_FUIDS",		 
 						"RESP_MIME_TYPES" 
 						  )
-				  .filter(col("TIPO").equalTo(gc_http));
+				  .filter(col("TIPO").equalTo(gc_http));			
 		
-		lv_http.printSchema();
+		System.out.println("Conexões HTTP: \t"+lt_http.count());
 		
-		System.out.println("Conexões HTTP: \t"+lv_http.count());
+		return lt_http;
 		
-		lv_http.show();
+	}
+	
+	public void m_conn_consumo(Dataset<Row> lv_conn) {
+
+		Dataset<Row> lv_res;
+
+		lv_res = lv_conn.sort(col("ORIG_BYTES").desc());
+
+		lv_res.show(100);
+
+	}
+
+	public void m_get_www_info() {
+		
+		Dataset<Row> lt_query;
+		
+		lt_query = m_dns_query(gt_dns);
+
+		m_get_conn_query(gt_conn, lt_query);
+
+	}
+	
+	public Dataset<Row> m_dns_query(Dataset<Row> lv_dns) {
+
+		Dataset<Row> lv_res;
+
+		lv_res = lv_dns.select("UID",
+							   "ID_ORIG_H",
+							   "ID_RESP_H",
+							   "QUERY")
+				// col("ANSWERS"))
+				.filter(col("QUERY").like("%www.%")).limit(1000); // equalTo("www.facebook.com"))
+		// .groupBy("QUERY")
+		// .count().sort(col("count").desc());
+
+		// m_save_csv(lv_res, gc_dns);
+
+		// m_show_dataset(lv_res);
+
+		return lv_res;
+
 	}
 	
 	public void m_get_conn_query(Dataset<Row> lv_conn, Dataset<Row> lv_dns) {
-		
+			
 		Dataset<Row> lv_res;
 		
 		lv_res = lv_dns.as("dns")				 
@@ -286,18 +297,15 @@ public class cl_processa {
 						   "DURATION",  
 						   "ORIG_BYTES",
 						   "RESP_BYTES",
-						   "QUERY",
-						   "ANSWERS"						   
+						   "QUERY"						   						  
 						   )				   
 				   .sort(col("ORIG_BYTES").desc());
 				   
 				
 		System.out.println("QUERY CONN: \t"+lv_res.count() + "\n\n");
-						
-		//lv_res.printSchema();
 		
-		//lv_res.show();
-		
+		m_show_dataset(lv_res,"Totais de CONN por DNS-QUERY");
+				
 		m_save_csv(lv_res, "conn_query");
 		
 		lv_res = lv_res.groupBy("QUERY")
@@ -305,15 +313,22 @@ public class cl_processa {
 				//.count()					   
 				//.sort(col("COUNT").desc());
 		
-		//lv_res.printSchema();
+		//m_show_dataset(lv_res);
 		
-		//lv_res.show();
-		
-		m_save_csv(lv_res, "conn_query_s");
-		
+		m_save_csv(lv_res, "conn_query_s");	
 		
 	}
-
+	
+	public void m_show_dataset(Dataset<Row> lv_data, String lv_desc) {
+		
+		lv_data.printSchema();
+		
+		lv_data.show();
+		
+		System.out.println("Conexões" + lv_desc + ": \t"+lv_data.count());
+		
+	}
+	
 	public void m_save_csv(Dataset<Row> lv_data, String lv_dir){
 		
 		String lv_path = gc_path_r + lv_dir;
@@ -322,8 +337,8 @@ public class cl_processa {
 	      .write()
 	      .option("header", "true")
 	      .mode("overwrite") //substitui o arquivo de resultado pelo novo			
-	      .json(lv_path);
-	      //.csv(lv_path);
+	      //.json(lv_path);
+	      .csv(lv_path);
 		
 	}
 }

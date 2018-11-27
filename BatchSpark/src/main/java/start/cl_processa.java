@@ -91,8 +91,8 @@ public class cl_processa {
 			      .read()
 			      .format("org.apache.phoenix.spark")
 			      .options(gv_phoenix)							   
-			      .load()
-			      .filter("TIPO = 'CONN' OR TIPO = 'DNS'");//filter("TS_CODE = TO_TIMESTAMP ('"+gc_stamp+"')"); //" AND ( TIPO = 'CONN' OR TIPO = 'DNS' )");
+			      .load().sort("UID");
+			      //.filter("TIPO = 'CONN' OR TIPO = 'DNS'");//filter("TS_CODE = TO_TIMESTAMP ('"+gc_stamp+"')"); //" AND ( TIPO = 'CONN' OR TIPO = 'DNS' )");
 			      /*.filter(col("TS_CODE").gt(gc_stamp))
 			      .filter(col("TIPO").equalTo(gc_conn));*/
 							   
@@ -106,12 +106,18 @@ public class cl_processa {
 	public void m_processa() throws AnalysisException {
 				
 		gt_conn = m_processa_conn(gt_data);
+		
+		m_save_csv(gt_conn, "CONN-ALL");
 
+		//m_show_dataset(gt_conn,"CONN-ALL");
+		
 		gt_dns = m_processa_dns(gt_data);
+		m_save_csv(gt_dns, "DNS-ALL");
 		
-		// gt_http = m_processa_http(lv_data);
+		gt_http = m_processa_http(gt_data);
+		m_save_csv(gt_http, "HTTP-ALL");
 		
-		m_get_www_info(); //Exporta totais da conexão por filtro de WWW
+		//m_get_www_info(); //Exporta totais da conexão por filtro de WWW
 		
 
 	}
@@ -141,10 +147,10 @@ public class cl_processa {
 						  "ORIG_PKTS",		
 						  "ORIG_IP_BYTES",	
 						  "RESP_PKTS",		
-						  "RESP_IP_BYTES",  
-						  "TUNNEL_PARENTS"
+						  "RESP_IP_BYTES"  
+						 // "TUNNEL_PARENTS"
 						  )				  
-				  .filter(col("TIPO").equalTo(gc_conn));
+				  .filter(col("TIPO").equalTo(gc_conn)).limit(10000);
 				  
 		
 		System.out.println("Conexões CONN: \t"+lv_conn.count());
@@ -194,11 +200,11 @@ public class cl_processa {
 						"RD",			
 						"RA",			
 						"Z",			
-						"ANSWERS",		
-						"TTLS",		
+						//"ANSWERS",		
+						//"TTLS",		
 						"REJECTED"  
 						)
-				.filter(col("TIPO").equalTo(gc_dns));
+				.filter(col("TIPO").equalTo(gc_dns)).limit(10000);
 						
 		System.out.println("Conexões DNS: \t"+lv_dns.count());
 		
@@ -227,12 +233,12 @@ public class cl_processa {
 						"REQUEST_BODY_LEN",
 						"RESPONSE_BODY_LEN",
 						"STATUS_CODE",	
-						"STATUS_MSG",		 
-						"TAGS",			
-						"RESP_FUIDS",		 
-						"RESP_MIME_TYPES" 
+						"STATUS_MSG"		 
+						//"TAGS",			
+						//"RESP_FUIDS",		 
+						//"RESP_MIME_TYPES" 
 						  )
-				  .filter(col("TIPO").equalTo(gc_http));			
+				  .filter(col("TIPO").equalTo(gc_http)).limit(10000);			
 		
 		System.out.println("Conexões HTTP: \t"+lt_http.count());
 		
@@ -266,16 +272,20 @@ public class cl_processa {
 
 		lv_res = lv_dns.select("UID",
 							   "ID_ORIG_H",
+							   "ID_ORIG_P",
 							   "ID_RESP_H",
+							   "ID_RESP_P",
 							   "QUERY")
 				// col("ANSWERS"))
-				.filter(col("QUERY").like("%www.%")).limit(1000); // equalTo("www.facebook.com"))
+				.filter(col("QUERY").like("%www.%"))//.limit(1000); // equalTo("www.facebook.com"))
+				.sort("QUERY");
+		
 		// .groupBy("QUERY")
 		// .count().sort(col("count").desc());
 
-		// m_save_csv(lv_res, gc_dns);
+		m_save_csv(lv_res, "DNS-WWW");
 
-		// m_show_dataset(lv_res);
+		m_show_dataset(lv_res,"DNS-WWW");
 
 		return lv_res;
 
@@ -287,46 +297,46 @@ public class cl_processa {
 		
 		lv_res = lv_dns.as("dns")				 
 				 .join(lv_conn.as("conn"), "UID")							  
-				 	.select("UID",
-						   "conn.ID_ORIG_H",
-						   "ID_ORIG_P",  
-						   "conn.ID_RESP_H", 
-						   "ID_RESP_P",  
-						   "PROTO",
-						   "SERVICE",	
-						   "DURATION",  
-						   "ORIG_BYTES",
-						   "RESP_BYTES",
-						   "QUERY"						   						  
-						   )				   
+				 .select("UID",
+						 "conn.ID_ORIG_H",
+						 "conn.ID_ORIG_P",  
+						 "conn.ID_RESP_H", 
+						 "conn.ID_RESP_P",  
+						 "PROTO",
+						 "SERVICE",	
+						 "DURATION",  
+						 "ORIG_BYTES",
+						 "RESP_BYTES",
+						 "QUERY"						   						  
+						 )
+				   .distinct()				   
 				   .sort(col("ORIG_BYTES").desc());
-				   
+				   						
+		m_show_dataset(lv_res,"CONN por DNS-QUERY");
 				
-		System.out.println("QUERY CONN: \t"+lv_res.count() + "\n\n");
-		
-		m_show_dataset(lv_res,"Totais de CONN por DNS-QUERY");
-				
-		m_save_csv(lv_res, "conn_query");
+		m_save_csv(lv_res, "CONN-WWW");
 		
 		lv_res = lv_res.groupBy("QUERY")
-				.sum("ORIG_BYTES");
-				//.count()					   
-				//.sort(col("COUNT").desc());
+				.sum("DURATION",
+					 "ORIG_BYTES",
+					 "RESP_BYTES" )
+				.sort(col("sum(RESP_BYTES)").desc());
 		
-		//m_show_dataset(lv_res);
 		
-		m_save_csv(lv_res, "conn_query_s");	
+		m_show_dataset(lv_res, "Totais de CONN por DNS-QUERY");
+		
+		m_save_csv(lv_res, "CONN-WWW-SUM");	
 		
 	}
 	
 	public void m_show_dataset(Dataset<Row> lv_data, String lv_desc) {
 		
-		lv_data.printSchema();
+		System.out.println("\nConexões - " + lv_desc + "\t" + lv_data.count());
 		
-		lv_data.show();
+		//lv_data.printSchema();
 		
-		System.out.println("Conexões" + lv_desc + ": \t"+lv_data.count());
-		
+		//lv_data.show();
+						
 	}
 	
 	public void m_save_csv(Dataset<Row> lv_data, String lv_dir){

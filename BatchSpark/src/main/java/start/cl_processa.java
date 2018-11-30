@@ -27,7 +27,7 @@ public class cl_processa {
 	final static String gc_dns  = "DNS";
 	final static String gc_http = "HTTP";
 	
-	final static String gc_stamp = "2018-11-25 15:53:00.000";
+	final static String gc_stamp = "2018-11-28 12:54:00.000";
 	
 	final static String gc_path_r = "/home/user/Documentos/batch_spark/";
 	
@@ -91,10 +91,10 @@ public class cl_processa {
 			      .read()
 			      .format("org.apache.phoenix.spark")
 			      .options(gv_phoenix)							   
-			      .load().sort("UID");
+			      .load().sort("UID")
 			      //.filter("TIPO = 'CONN' OR TIPO = 'DNS'");//filter("TS_CODE = TO_TIMESTAMP ('"+gc_stamp+"')"); //" AND ( TIPO = 'CONN' OR TIPO = 'DNS' )");
-			      /*.filter(col("TS_CODE").gt(gc_stamp))
-			      .filter(col("TIPO").equalTo(gc_conn));*/
+			      .filter(col("TS_CODE").gt(gc_stamp));
+			      //.filter(col("TIPO").equalTo(gc_conn));*/
 							   
 		
 		//lv_data.createOrReplaceTempView(gv_table); //cria uma tabela temporaria, para acessar via SQL
@@ -111,21 +111,21 @@ public class cl_processa {
 
 		//m_show_dataset(gt_conn,"CONN-ALL");
 		
-		gt_dns = m_processa_dns(gt_data);
+		/*gt_dns = m_processa_dns(gt_data);
 		m_save_csv(gt_dns, "DNS-ALL");
 		
 		gt_http = m_processa_http(gt_data);
 		m_save_csv(gt_http, "HTTP-ALL");
 		
-		//m_get_www_info(); //Exporta totais da conexão por filtro de WWW
+		m_get_www_info();*/ //Exporta totais da conexão por filtro de WWW
 		
 
 	}
 	public Dataset<Row> m_processa_conn(Dataset<Row> lv_data) throws AnalysisException {
 		
-		Dataset<Row> lv_conn;	
+		Dataset<Row> lt_conn;	
 		
-		lv_conn = lv_data
+		lt_conn = lv_data
 				  .select("TIPO",              
 						  "TS_CODE",  								   	
 						  "TS",         
@@ -151,11 +151,10 @@ public class cl_processa {
 						 // "TUNNEL_PARENTS"
 						  )				  
 				  .filter(col("TIPO").equalTo(gc_conn)).limit(10000);
-				  
+				  		
+		m_show_dataset(lt_conn,"Conexões CONN:");
 		
-		System.out.println("Conexões CONN: \t"+lv_conn.count());
-		
-		return lv_conn;
+		return lt_conn;
 		
 		//m_conn_consumo(lv_conn);
 		
@@ -167,17 +166,15 @@ public class cl_processa {
 		
 		lv_conn = lv_data
 				.sparkSession()
-				.sql(lv_sql);*/
-						
-		//m_show_dataset(lv_conn);
+				.sql(lv_sql);*/								
 		
 	}
 	
 	public Dataset<Row> m_processa_dns(Dataset<Row> lv_data) {
 
-		Dataset<Row> lv_dns;
+		Dataset<Row> lt_dns;
 		
-		lv_dns = lv_data
+		lt_dns = lv_data
 				.select("TIPO",              
 						"TS_CODE",  								   	
 						"TS",         
@@ -205,12 +202,10 @@ public class cl_processa {
 						"REJECTED"  
 						)
 				.filter(col("TIPO").equalTo(gc_dns)).limit(10000);
-						
-		System.out.println("Conexões DNS: \t"+lv_dns.count());
+								
+		m_show_dataset(lt_dns,"Conexões DNS:");
 		
-		return lv_dns;
-		
-		//m_show_dataset(lv_dns);
+		return lt_dns;		
 		
 	}
 			
@@ -240,7 +235,9 @@ public class cl_processa {
 						  )
 				  .filter(col("TIPO").equalTo(gc_http)).limit(10000);			
 		
-		System.out.println("Conexões HTTP: \t"+lt_http.count());
+		//System.out.println("Conexões HTTP: \t"+lt_http.count());
+		
+		m_show_dataset(lt_http,"Conexões HTTP:");
 		
 		return lt_http;
 		
@@ -283,7 +280,7 @@ public class cl_processa {
 		// .groupBy("QUERY")
 		// .count().sort(col("count").desc());
 
-		m_save_csv(lv_res, "DNS-WWW");
+		//m_save_csv(lv_res, "DNS-WWW");
 
 		m_show_dataset(lv_res,"DNS-WWW");
 
@@ -333,9 +330,9 @@ public class cl_processa {
 		
 		System.out.println("\nConexões - " + lv_desc + "\t" + lv_data.count());
 		
-		//lv_data.printSchema();
+		lv_data.printSchema();
 		
-		//lv_data.show();
+		lv_data.show();
 						
 	}
 	

@@ -2,6 +2,7 @@ package start;
 
 import static org.apache.spark.sql.functions.col;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,8 +21,8 @@ import static org.apache.spark.sql.functions.col;
 public class cl_processa {
 
 //---------CONSTANTES---------//
-	final static String gv_table = "JSON9";
-	final static String gv_zkurl = "localhost:2181";
+	final static String gc_table = "JSON9";
+	final static String gc_zkurl = "localhost:2181";
 	
 	final static String gc_conn = "CONN";
 	final static String gc_dns  = "DNS";
@@ -32,6 +33,7 @@ public class cl_processa {
 	final static String gc_path_r = "/home/user/Documentos/batch_spark/";
 	
 //---------ATRIBUTOS---------//
+	
 	private static cl_processa gv_processa;
 
 	private static Map<String, String> gv_phoenix;
@@ -41,6 +43,10 @@ public class cl_processa {
 	private static SparkContext gv_context;
 	                        
 	private static SparkSession gv_session;
+	
+	private static int gv_batch = 2;
+	
+	private long gv_stamp;
 	
 	private Dataset<Row> gt_data;	
 	private Dataset<Row> gt_conn;
@@ -58,22 +64,40 @@ public class cl_processa {
 						
 		m_conecta_phoenix();
 		
-		m_seleciona();
+		Date lv_time = new Date();
 		
-		if(gt_data.count() > 0) {
+		gv_stamp = lv_time.getTime();
 		
-			m_processa();
+		switch(gv_batch){
 
+		case 1:
+			
+			m_seleciona();
+	
+			if(gt_data.count() > 0) {
+			
+				m_processa();
+	
+			}
+			
+			break;
+		
+		case 2:
+		
+			m_seleciona_conn();
+		
 		}
+		
+		
 	}
 	
 	public static void m_conecta_phoenix(){
 		
 		gv_phoenix = new HashMap<String, String>();
 		
-		gv_phoenix.put("zkUrl", gv_zkurl);
+		gv_phoenix.put("zkUrl", gc_zkurl);
 		gv_phoenix.put("hbase.zookeeper.quorum", "master");
-		gv_phoenix.put("table", gv_table);
+		gv_phoenix.put("table", gc_table);
 		
 		gv_conf = new SparkConf().setMaster("local[4]").setAppName("SelectLog");
 		
@@ -83,6 +107,8 @@ public class cl_processa {
 		
 		Logger.getRootLogger().setLevel(Level.ERROR);
 	}
+	
+	///-----------CASE 1 - Normal-----------////
 	
 	public void m_seleciona() throws AnalysisException {
 		
@@ -121,6 +147,7 @@ public class cl_processa {
 		
 
 	}
+	
 	public Dataset<Row> m_processa_conn(Dataset<Row> lv_data) throws AnalysisException {
 		
 		Dataset<Row> lt_conn;	
@@ -348,6 +375,114 @@ public class cl_processa {
 	      .csv(lv_path);
 		
 	}
+
+	///-----------CASE 2 - Conexões-----------////
+	
+	public void m_seleciona_conn(){
+		
+		gt_data = gv_session
+			      .sqlContext()
+			      .read()
+			      .format("org.apache.phoenix.spark")
+			      .options(gv_phoenix)							   
+			      .load()			      
+			      .filter(col("TIPO").equalTo(gc_conn))
+			      .filter(col("TS_CODE").gt(gc_stamp))			      
+				  .sort(col("TS_CODE").desc());					   
+	
+		/*Dataset<Row> lt_orig;	
+		
+		lt_orig = gt_data.groupBy("ID_ORIG_H",
+								  "ID_ORIG_P",
+								  "PROTO",
+								  "SERVICE").count();
+		
+		System.out.println("Conexões TOTAL: \t"+ lt_orig.count() + "\n\n");
+		
+		lt_orig.show();*/
+				
+		m_show_dataset(gt_data, "Totais de CONN:");
+		
+		m_process_orig(gt_data);
+		
+		m_process_resp(gt_data);
+		
+				
+	}
+	
+	public void m_process_orig(Dataset<Row> lt_orig) {	
+		
+		lt_orig = gt_data.groupBy("ID_ORIG_H",
+								  //"ID_ORIG_P",
+								  "PROTO",
+								  "SERVICE")
+						 .sum("DURATION",
+							  "ORIG_BYTES",
+							  "RESP_BYTES");
+			
+		lt_orig = lt_orig.select(col("ID_ORIG_H"),
+                                // col("ID_ORIG_P"),
+                                 col("PROTO"),
+                                 col("SERVICE"),
+                                 col("sum(DURATION)").as("DURATION"),
+				                 col("sum(ORIG_BYTES)").as("ORIG_BYTES"),
+				                 col("sum(RESP_BYTES)").as("RESP_BYTES"))
+		                 .withColumn("TS_CODE", functions.lit(gv_stamp));
+				
+		m_save_log(lt_orig, "ORIG");	
+		
+		m_show_dataset(lt_orig, "Totais de CONN ORIGEM:");
+		
+	}
+	
+	public void m_process_resp(Dataset<Row> lt_resp) {
+				
+		lt_resp = gt_data.groupBy("ID_RESP_H",
+								  //"ID_RESP_P",
+								  "PROTO",
+								  "SERVICE")
+						 .sum("DURATION",
+							  "ORIG_BYTES",
+							  "RESP_BYTES");
+		
+		lt_resp = lt_resp.select(col("ID_RESP_H"),
+                               //col("ID_RESP_P"),
+                               col("PROTO"),
+                               col("SERVICE"),
+                               col("sum(DURATION)").as("DURATION"),
+				               col("sum(ORIG_BYTES)").as("ORIG_BYTES"),
+				               col("sum(RESP_BYTES)").as("RESP_BYTES"))
+		                 .withColumn("TS_CODE", functions.lit(gv_stamp));
+		
+		m_save_log(lt_resp, "RESP");			
+		
+		m_show_dataset(lt_resp, "Totais de CONN RESPOSTA:");
+		
+	}
+	
+	
+	public static void m_save_log(Dataset<Row> lt_data, String lv_table) {
+		
+		long lv_num = lt_data.count();			
+			
+		if(lv_num > 0) {
+		
+			lt_data.write()
+				.format("org.apache.phoenix.spark")
+				.mode("overwrite")
+				.option("table", lv_table)
+				.option("zkUrl", gc_zkurl)
+				.option("autocommit", "true")
+				.save();
+		}
+		
+		System.out.println("LOG: "+ lv_table +" = "+ lv_num);
+		
+		lt_data.printSchema();
+		lt_data.show();
+	
+	}
+
 }
 
 

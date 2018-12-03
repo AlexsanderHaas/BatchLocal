@@ -2,7 +2,10 @@ package start;
 
 import static org.apache.spark.sql.functions.col;
 
+import java.util.List;
+
 import org.apache.spark.sql.AnalysisException;
+import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
@@ -46,7 +49,7 @@ public class cl_processa {
 		
 		cl_util.m_save_csv(lt_http, "HTTP-ALL");
 		
-		m_get_www_info(lt_conn,lt_dns); //Exporta totais da conexão por filtro de WWW
+		m_get_www_info(lt_conn, lt_dns); //Exporta totais da conexão por filtro de WWW
 		
 	}
 	
@@ -237,6 +240,35 @@ public class cl_processa {
 				  "RESP_BYTES");
 		
 		m_save_csv(lt_total, "CONN_TOTAIS" );*/
+		
+	}
+
+	
+	///-----------CASE 5 - Análises-----------////
+	
+	public void m_conn_proto(Dataset<Row> lt_data) {
+		
+		List<String> lv_fields = null;//["ID_ORIG_H];//,"ID_RESP_H","ID_RESP_P"];
+		
+		Column[] lv_col = new Column[(Integer) 5];
+					
+		lv_col[0] = new Column ("ID_ORIG_H");
+		lv_col[2] = new Column ("ID_RESP_H");
+		lv_col[3] = new Column ("ID_RESP_P");
+		//lv_col[4] = new Column ("ID_RESP_H");
+		
+		lv_fields.add("ID_ORIG_H");
+		//lv_fields.add(col("ID_RESP_H"));
+		//lv_fields.add(col("ID_RESP_P"));
+		
+		Dataset<Row> lt_res;
+		
+		lt_data//.filter(col("SERVICE").equalTo("http"))
+		  //.filter(col("ID_ORIG_H").equalTo("192.168.10.50"))
+		  .groupBy(lv_col)				 		  
+		  .count();
+		
+		
 		
 	}
 	

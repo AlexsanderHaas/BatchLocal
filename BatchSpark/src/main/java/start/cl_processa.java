@@ -21,18 +21,21 @@ import static org.apache.spark.sql.functions.col;
 public class cl_processa {
 
 //---------CONSTANTES---------//
-	final static String gc_table = "JSON9";
+	final static String gc_table = "JSON00";
+	final static String gc_conn_ip = "CONN_IP1";
 	final static String gc_zkurl = "localhost:2181";
 	
 	final static String gc_conn = "CONN";
 	final static String gc_dns  = "DNS";
 	final static String gc_http = "HTTP";
 	
-	final static String gc_stamp = "2018-11-28 12:54:00.000";
+	final static String gc_stamp = "2018-12-02 21:57:00.000"; //por aqui ele considera o GMT -2
 	
 	final static String gc_path_r = "/home/user/Documentos/batch_spark/";
 	
 //---------ATRIBUTOS---------//
+	
+	private static int gv_submit = 0; //1=Cluster 
 	
 	private static cl_processa gv_processa;
 
@@ -44,14 +47,18 @@ public class cl_processa {
 	                        
 	private static SparkSession gv_session;
 	
-	private static int gv_batch = 2;
+	private static int gv_batch = 4;
 	
 	private long gv_stamp;
+	
+	private Date gv_time = new Date();
 	
 	private Dataset<Row> gt_data;	
 	private Dataset<Row> gt_conn;
 	private Dataset<Row> gt_dns;
 	private Dataset<Row> gt_http;
+	
+	private cl_get_results go_results;
 	
 	public static void main(String[] args) throws AnalysisException {
 	
@@ -61,12 +68,10 @@ public class cl_processa {
 	}
 	
 	public void m_start() throws AnalysisException {
-						
-		m_conecta_phoenix();
+				
+		gv_stamp = gv_time.getTime();
 		
-		Date lv_time = new Date();
-		
-		gv_stamp = lv_time.getTime();
+		m_conecta_phoenix();				
 		
 		switch(gv_batch){
 
@@ -85,10 +90,33 @@ public class cl_processa {
 		case 2:
 		
 			m_seleciona_conn();
+			
+			m_show_dataset(gt_data, "Totais de CONN:");
+			
+			m_process_orig(gt_data);
+			
+			m_process_resp(gt_data);		
+			
+			break;
 		
-		}
-		
-		
+		case 3:
+			
+			go_results = new cl_get_results();
+			
+			go_results.m_start(gv_session);
+			
+			break;
+					
+		case 4:
+			
+			m_seleciona_conn();
+			
+			m_process_totais();
+			
+			break;
+			
+		}		
+
 	}
 	
 	public static void m_conecta_phoenix(){
@@ -99,8 +127,12 @@ public class cl_processa {
 		gv_phoenix.put("hbase.zookeeper.quorum", "master");
 		gv_phoenix.put("table", gc_table);
 		
-		gv_conf = new SparkConf().setMaster("local[4]").setAppName("SelectLog");
-		
+		if(gv_submit == 0) {			
+			gv_conf = new SparkConf().setMaster("local[4]").setAppName("SelectLog");
+		}else {
+			gv_conf = new SparkConf().setAppName("ProcessaIp");//se for executar no submit
+		}
+				
 		gv_context = new SparkContext(gv_conf);
 		
 		gv_session = new SparkSession(gv_context);		
@@ -353,17 +385,17 @@ public class cl_processa {
 		
 	}
 	
-	public void m_show_dataset(Dataset<Row> lv_data, String lv_desc) {
+	public static void m_show_dataset(Dataset<Row> lv_data, String lv_desc) {
 		
 		System.out.println("\nConexões - " + lv_desc + "\t" + lv_data.count());
 		
-		lv_data.printSchema();
+		//lv_data.printSchema();
 		
 		lv_data.show();
 						
 	}
 	
-	public void m_save_csv(Dataset<Row> lv_data, String lv_dir){
+	public static void m_save_csv(Dataset<Row> lv_data, String lv_dir){
 		
 		String lv_path = gc_path_r + lv_dir;
 		
@@ -399,14 +431,7 @@ public class cl_processa {
 		
 		System.out.println("Conexões TOTAL: \t"+ lt_orig.count() + "\n\n");
 		
-		lt_orig.show();*/
-				
-		m_show_dataset(gt_data, "Totais de CONN:");
-		
-		m_process_orig(gt_data);
-		
-		m_process_resp(gt_data);
-		
+		lt_orig.show();*/					
 				
 	}
 	
@@ -419,7 +444,7 @@ public class cl_processa {
 						 .sum("DURATION",
 							  "ORIG_BYTES",
 							  "RESP_BYTES");
-			
+		
 		lt_orig = lt_orig.select(col("ID_ORIG_H"),
                                 // col("ID_ORIG_P"),
                                  col("PROTO"),
@@ -429,7 +454,7 @@ public class cl_processa {
 				                 col("sum(RESP_BYTES)").as("RESP_BYTES"))
 		                 .withColumn("TS_CODE", functions.lit(gv_stamp));
 				
-		m_save_log(lt_orig, "ORIG");	
+		m_save_log(lt_orig);	
 		
 		m_show_dataset(lt_orig, "Totais de CONN ORIGEM:");
 		
@@ -454,35 +479,85 @@ public class cl_processa {
 				               col("sum(RESP_BYTES)").as("RESP_BYTES"))
 		                 .withColumn("TS_CODE", functions.lit(gv_stamp));
 		
-		m_save_log(lt_resp, "RESP");			
+		m_save_log(lt_resp);			
 		
 		m_show_dataset(lt_resp, "Totais de CONN RESPOSTA:");
 		
 	}
-	
-	
-	public static void m_save_log(Dataset<Row> lt_data, String lv_table) {
+		
+	public static void m_save_log(Dataset<Row> lt_data) {
 		
 		long lv_num = lt_data.count();			
 			
 		if(lv_num > 0) {
-		
+			
+			System.out.println("\nVai SALVAR Conexões - " + lv_num );
+			
 			lt_data.write()
 				.format("org.apache.phoenix.spark")
 				.mode("overwrite")
-				.option("table", lv_table)
+				.option("table", gc_conn_ip)
 				.option("zkUrl", gc_zkurl)
 				.option("autocommit", "true")
 				.save();
-		}
-		
-		System.out.println("LOG: "+ lv_table +" = "+ lv_num);
-		
-		lt_data.printSchema();
-		lt_data.show();
-	
+		}		
+					
 	}
 
+	///-----------CASE 4 - TOTAIS-----------////
+
+	public void m_process_totais() {
+		
+		Dataset<Row> lt_total;
+		
+		/*lt_total = gt_data.groupBy("PROTO",
+							  "ID_ORIG_H",
+							  "ID_ORIG_P",
+							  "ID_RESP_H",							  
+						      "ID_RESP_P")					     
+						 .sum("DURATION",
+							  "ORIG_PKTS",
+							  "ORIG_BYTES",
+							  "RESP_PKTS",
+							  "RESP_BYTES");*/
+		
+		/*gt_data.groupBy("PROTO")
+			   .count().show();
+		
+		gt_data.groupBy("PROTO",
+				        "SERVICE")
+			   .count().show();*/
+		
+		/*lt_total = gt_data.groupBy("ID_ORIG_H")				  			     
+			 .sum("DURATION",
+				  "ORIG_PKTS",
+				  "ORIG_BYTES",
+				  "RESP_PKTS",
+				  "RESP_BYTES");*/
+		
+		lt_total = gt_data//.filter(col("SERVICE").equalTo("http"))
+						  .filter(col("ID_ORIG_H").equalTo("192.168.10.50"))
+						  .groupBy("ID_ORIG_H",
+				                   //"ID_ORIG_P",
+				                   "ID_RESP_H",							  
+			                       "ID_RESP_P")				 		  
+						  .count();
+				 
+		
+		lt_total.sort(col("COUNT").desc()).show(200);
+		
+		/*lt_total = gt_data.groupBy("PROTO",
+				  "SERVICE")				  			     
+			 .sum("DURATION",
+				  "ORIG_PKTS",
+				  "ORIG_BYTES",
+				  "RESP_PKTS",
+				  "RESP_BYTES");
+		
+		m_save_csv(lt_total, "CONN_TOTAIS" );*/
+		
+	}
+	
 }
 
 

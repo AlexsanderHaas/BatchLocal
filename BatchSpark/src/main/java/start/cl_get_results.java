@@ -23,15 +23,11 @@ public class cl_get_results {
 	
 	//---------ATRIBUTOS---------//
 	
-	private static cl_processa gv_processa;
-
 	private static Map<String, String> gv_phoenix;
 
 	private static SparkSession gv_session;
 
 	private Dataset<Row> gt_data;
-	
-	private cl_processa go_processa;
 	
 	public void m_start(SparkSession lv_session) throws AnalysisException {		
 		
@@ -68,15 +64,15 @@ public class cl_get_results {
 			      //.filter(col("ID_ORIG_H").isNotNull());
 				  //.sort(col("DURATION ").desc());					   
 		
-		go_processa.m_show_dataset(gt_data, "Totais de CONN:");
+		cl_util.m_show_dataset(gt_data, "Totais de CONN:");
 		
 		lt_orig = gt_data.filter(col("ID_ORIG_H").isNotNull());					
 				
-		go_processa.m_save_csv(lt_orig, "CONN_ORIG" );
+		cl_util.m_save_csv(lt_orig, "CONN_ORIG" );
 		
 		lt_resp = gt_data.filter(col("ID_RESP_H").isNotNull());			
 		
-		go_processa.m_save_csv(lt_resp, "CONN_RESP" );
+		cl_util.m_save_csv(lt_resp, "CONN_RESP" );
 		
 	}
 		

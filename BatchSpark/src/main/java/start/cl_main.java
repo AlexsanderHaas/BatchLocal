@@ -19,7 +19,7 @@ public class cl_main {
 	
 	final static String gc_conn_ip = "CONN_IP1";
 	
-	final static String gc_stamp = "2018-12-02 21:57:00.000"; //por aqui ele considera o GMT -2
+	final static String gc_stamp = "2018-12-02 21:57:00.000"; //por aqui ele considera o GMT -2 e no SQL no CMD é sem GMT
 	
 	//---------ATRIBUTOS---------//
 	
@@ -29,7 +29,7 @@ public class cl_main {
 	
 	private static int gv_submit = 0; //1=Cluster 
 	
-	private static int gv_batch = 4;
+	private static int gv_batch = 5;
 	
 	private Dataset<Row> gt_data;
 	
@@ -63,11 +63,11 @@ public class cl_main {
 		
 		m_conf_spark();
 		
+		gv_stamp = gv_time.getTime();	//Stamp do inicio do processamento
+		
 		go_select = new cl_seleciona();
 		
-		go_processa = new cl_processa();
-		
-		gv_stamp = gv_time.getTime();						
+		go_processa = new cl_processa(gc_stamp, gv_stamp);							
 		
 		switch(gv_batch){
 
@@ -116,7 +116,16 @@ public class cl_main {
 			go_processa.m_process_totais(gt_data);
 			
 			break;
+						
+		case 5: //Análises
+					
+			go_select.m_conf_phoenix(gc_table, "TotaisConn", gv_session);
 			
+			gt_data = go_select.m_seleciona(gc_stamp);
+			
+			go_processa.m_start_analyzes(gt_data);			
+			
+			break;
 		}		
 
 	}

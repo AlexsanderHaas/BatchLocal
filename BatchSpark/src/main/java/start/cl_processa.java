@@ -2,8 +2,6 @@ package start;
 
 import static org.apache.spark.sql.functions.col;
 
-import java.util.List;
-
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
@@ -15,17 +13,47 @@ import static org.apache.spark.sql.functions.col;
 public class cl_processa {
 
 //---------CONSTANTES---------//
-	
+		
 	final static String gc_conn_ip = "CONN_IP1";	
+	
+	final static String gc_analyzes = "LOG_ANALYZES2";
 	
 	final static String gc_conn = "CONN";
 	final static String gc_dns  = "DNS";
 	final static String gc_http = "HTTP";
-
-			
+	
+//------------------Colunas------------------------//
+	
+	final static String gc_proto 		= "PROTO";
+	final static String gc_service		= "SERVICE";
+	final static String gc_orig_h		= "ID_ORIG_H";
+	final static String gc_orig_p		= "ID_ORIG_P";
+	final static String gc_resp_h		= "ID_RESP_H";
+	final static String gc_resp_p		= "ID_RESP_P";
+	
+	final static String gc_duration     = "DURATION";
+	final static String gc_orig_pkts    = "ORIG_PKTS";
+	final static String gc_orig_bytes   = "ORIG_BYTES";
+	final static String gc_resp_pkts	= "RESP_PKTS";
+	final static String gc_resp_bytes   = "RESP_BYTES";
+					
 //---------ATRIBUTOS---------//
 	
 	private cl_seleciona go_select;
+	
+	private long gv_stamp_filtro; //Filtro da seleção de dados
+	
+	private long gv_stamp; //Stamp do inicio da execução
+	
+	public cl_processa(String lv_filtro, long lv_stamp){
+		
+		java.sql.Timestamp lv_ts = java.sql.Timestamp.valueOf( lv_filtro ) ;
+		
+		gv_stamp_filtro = lv_ts.getTime(); 
+		
+		gv_stamp = lv_stamp;
+		
+	}
 	
 	///-----------CASE 1 - Normal-----------////	
 	
@@ -244,30 +272,194 @@ public class cl_processa {
 	}
 
 	
-	///-----------CASE 5 - Análises-----------////
+	///-----------CASE 5 - Análises-----------////		
 	
-	public void m_conn_proto(Dataset<Row> lt_data) {
+	public void m_start_analyzes(Dataset<Row> lt_data) {
 		
-		List<String> lv_fields = null;//["ID_ORIG_H];//,"ID_RESP_H","ID_RESP_P"];
+		final String lc_proto 		     = "PROTO";
+		final String lc_service 	     = "SERVICE";
+		final String lc_orig_h	 	     = "ORIG_H";
+		final String lc_orig_p	 	     = "ORIG_P";
+		final String lc_orig_h_p	     = "ORIG_H_P";
+		final String lc_orig_h_proto	 = "ORIG_H_PROTO";
+		final String lc_orig_h_service	 = "ORIG_H_SERVICE";
+		final String lc_orig_h_p_resp_h  = "ORIG_H_P_RESP_H";
 		
-		Column[] lv_col = new Column[(Integer) 5];
-					
-		lv_col[0] = new Column ("ID_ORIG_H");
-		lv_col[2] = new Column ("ID_RESP_H");
-		lv_col[3] = new Column ("ID_RESP_P");
-		//lv_col[4] = new Column ("ID_RESP_H");
+		final String lc_resp_h	 	     = "RESP_H";
+		final String lc_resp_p	 	     = "RESP_P";
+		final String lc_resp_h_p	     = "RESP_H_P";
+		final String lc_resp_h_proto	 = "RESP_H_PROTO";
+		final String lc_resp_h_service	 = "RESP_H_SERVICE";
+		final String lc_resp_h_p_orig_h  = "RESP_H_P_ORIG_H";
 		
-		lv_fields.add("ID_ORIG_H");
-		//lv_fields.add(col("ID_RESP_H"));
-		//lv_fields.add(col("ID_RESP_P"));
+		final String lc_orig_h_resp_h 	  = "ORIG_H_RESP_H";
+		final String lc_orig_h_p_resp_h_p = "ORIG_H_P_RESP_H_P";
+										
+		//Colunas a somar
 		
-		Dataset<Row> lt_res;
+		String[] lv_sum = new String[5]; //Colunas a somar
+		            
+		lv_sum[0] = gc_duration;
+		lv_sum[1] = gc_orig_pkts;
+		lv_sum[2] = gc_orig_bytes;
+		lv_sum[3] = gc_resp_pkts;
+	    lv_sum[4] = gc_resp_bytes;
 		
-		lt_data//.filter(col("SERVICE").equalTo("http"))
-		  //.filter(col("ID_ORIG_H").equalTo("192.168.10.50"))
-		  .groupBy(lv_col)				 		  
-		  .count();
+		Column[] lv_group = new Column[(Integer) 1]; //Colunas a agrupar (Não pode deixar posições vazias)
 		
+//-----------Conexões por PROTOCOLO--------------------------------------//
+		
+		lv_group[0] = new Column(gc_proto);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_proto, "Conexões por Protocolo");
+		
+//-----------Conexões por SERVIÇO--------------------------------------//
+		
+		lv_group[0] = new Column(gc_service);
+				
+		m_group_sum(lt_data, lv_group, lv_sum, lc_service, "Conexões por Serviço");	
+		
+//-----------Conexões IP Origem--------------------------------------//
+		
+		lv_group[0] = new Column(gc_orig_h);
+						
+		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h, "Conexões por IP Origem");
+		
+		lv_group[0] = new Column(gc_orig_p);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_p,"Conexões por Portas Origem");	
+		
+		lv_group = new Column[(Integer) 2];
+		
+		lv_group[0] = new Column(gc_orig_h);
+		
+		lv_group[1] = new Column(gc_orig_p);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_p, "Conexões por IP e Porta Origem");
+		
+		lv_group[0] = new Column(gc_orig_h);
+		
+		lv_group[1] = new Column(gc_proto);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_proto, "Conexões por IP Origem e Protocolo");
+				
+		lv_group[0] = new Column(gc_orig_h);
+		
+		lv_group[1] = new Column(gc_service);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_service, "Conexões por IP Origem e Serviço");
+						
+		lv_group = new Column[(Integer) 3];
+		
+		lv_group[0] = new Column(gc_orig_h);
+		
+		lv_group[1] = new Column(gc_orig_p);
+		
+		lv_group[2] = new Column(gc_resp_h);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_p_resp_h,"Conexões por IP Origem e Porta com IP Resposta");
+		
+		
+//-----------Conexões IP Resposta--------------------------------------//
+		
+		lv_group = new Column[(Integer) 1];
+		
+		lv_group[0] = new Column(gc_resp_h);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h, "Conexões por IP Resposta");
+		
+		lv_group[0] = new Column(gc_resp_p);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_p, "Conexões por Portas Resposta");
+		
+		lv_group = new Column[(Integer) 2];
+		
+		lv_group[0] = new Column(gc_resp_h);
+		
+		lv_group[1] = new Column(gc_resp_p);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h_p, "Conexões por IP e Porta Resposta");
+		
+		lv_group[0] = new Column(gc_resp_h);
+		
+		lv_group[1] = new Column(gc_proto);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h_proto, "Conexões por IP Resposta e Protocolo");
+		
+		lv_group[0] = new Column(gc_resp_h);
+		
+		lv_group[1] = new Column(gc_service);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h_service, "Conexões por IP Resposta e Serviço");
+		
+		lv_group = new Column[(Integer) 3];
+		
+		lv_group[0] = new Column(gc_resp_h);
+		
+		lv_group[1] = new Column(gc_resp_p);
+		
+		lv_group[2] = new Column(gc_orig_h);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h_p_orig_h, "Conexões por IP Resposta e Porta com IP Origem");
+		
+//-----------Conexões IP Origem com IP Resposta--------------------------------------//
+		
+		lv_group = new Column[(Integer) 2];
+		
+		lv_group[0] = new Column(gc_orig_h);
+		
+		lv_group[1] = new Column(gc_resp_h);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_resp_h, "Conexões por IP Origem e IP Resposta");		
+		
+		lv_group = new Column[(Integer) 4];
+		
+		lv_group[0] = new Column(gc_orig_h);
+		
+		lv_group[1] = new Column(gc_orig_p);
+		
+		lv_group[2] = new Column(gc_resp_h);
+		
+		lv_group[3] = new Column(gc_resp_p);
+		
+		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_p_resp_h_p, "Conexões por IP Origem e Porta com IP Resposta e Porta");
+		
+	}
+	
+	public void m_group_sum(Dataset<Row> lt_data, 									
+						   Column[] lv_cols_g, 
+						   String[] lv_cols_s,
+						   String   lv_tipo,
+						   String   lv_desc) {
+		
+		Dataset<Row> lt_sum;
+		
+		Dataset<Row> lt_group;
+		
+		lt_group = lt_data.groupBy(lv_cols_g)	
+				  .count()
+				  .sort(col("COUNT").desc());
+		
+		lt_group = lt_group.withColumn("TIPO", functions.lit(lv_tipo))
+						   .withColumn("TS_FILTRO", functions.lit(gv_stamp_filtro))						   
+						   .withColumn("TS_CODE", functions.lit(gv_stamp))
+						   .withColumn("ROW_ID", functions.monotonically_increasing_id());
+		
+		cl_util.m_save_log(lt_group, gc_analyzes);				
+		
+		cl_util.m_show_dataset(lt_group, lv_desc + "-Group:");	
+		
+		lt_sum = lt_data.groupBy(lv_cols_g)				 		  
+						.sum(lv_cols_s);	
+		
+		lt_sum = lt_sum.withColumn("TIPO", functions.lit(lv_tipo))
+					   .withColumn("TS_FILTRO", functions.lit(gv_stamp_filtro))
+					   .withColumn("TS_CODE", functions.lit(gv_stamp))
+					   .withColumn("ROW_ID", functions.monotonically_increasing_id());
+		
+		cl_util.m_save_log(lt_sum, gc_analyzes);
+		
+		cl_util.m_show_dataset(lt_sum, lv_desc + "-SUM:");
 		
 		
 	}

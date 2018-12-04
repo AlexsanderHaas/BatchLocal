@@ -49,14 +49,14 @@ public class cl_seleciona {
 			      .read()
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
-			      .load().sort("UID")
+			      .load()			      
 			      //.filter("TIPO = 'CONN' OR TIPO = 'DNS'");//filter("TS_CODE = TO_TIMESTAMP ('"+gc_stamp+"')"); //" AND ( TIPO = 'CONN' OR TIPO = 'DNS' )");
 			      .filter(col("TS_CODE").gt(lv_stamp));
 			      //.filter(col("TIPO").equalTo(gc_conn));*/
 							   		
 		//lv_data.createOrReplaceTempView(gv_table); //cria uma tabela temporaria, para acessar via SQL
 		
-		//System.out.println("Conexões TOTAL: \t"+lt_data.count() + "\n\n");
+		System.out.println("Conexões TOTAL: \t"+lt_data.count() + "\n\n");
 		
 		return lt_data;
 				

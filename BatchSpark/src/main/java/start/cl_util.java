@@ -9,13 +9,13 @@ public class cl_util {
 	
 	final static String gc_path_r = "/home/user/Documentos/batch_spark/";
 	
-	public static void m_show_dataset(Dataset<Row> lv_data, String lv_desc) {
+	public static void m_show_dataset(Dataset<Row> lt_data, String lv_desc) {
 		
-		System.out.println("\nConexões - " + lv_desc + "\t" + lv_data.count());
+		System.out.println("\n" + lv_desc + "\t" + lt_data.count());
 		
-		//lv_data.printSchema();
+		lt_data.printSchema();
 		
-		lv_data.show();
+		lt_data.show();
 						
 	}
 	
@@ -37,7 +37,7 @@ public class cl_util {
 			
 		if(lv_num > 0) {
 			
-			System.out.println("\nVai SALVAR Conexões - " + lv_num );
+			//System.out.println("\nVai SALVAR Conexões - " + lv_num );
 			
 			lt_data.write()
 				.format("org.apache.phoenix.spark")

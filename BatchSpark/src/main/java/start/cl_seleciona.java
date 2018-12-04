@@ -225,7 +225,7 @@ public class cl_seleciona {
 			      .load()			      			      
 			      .filter(col("TIPO").equalTo(lv_tipo))
 				  .filter(col("TS_CODE").gt(lv_stamp))
-				  .filter(col("COUNT").isNull()).limit(100);
+				  .filter(col("COUNT").isNull());
 			     		
 		System.out.println("Conexões Resultado: \t"+lt_data.count() + "\n\n");
 		

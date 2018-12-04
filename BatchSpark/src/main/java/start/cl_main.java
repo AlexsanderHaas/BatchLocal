@@ -129,11 +129,13 @@ public class cl_main {
 			
 		case 6:
 			
+			cl_kmeans lo_kmeans = new cl_kmeans();
+			
 			go_select.m_conf_phoenix("LOG_ANALYZES2", "Resultados", gv_session);
 			
 			gt_data = go_select.m_seleciona_results("2018-12-04 10:57:00.000", "ORIG_H_P");
 			
-			go_processa.m_kmeans(gt_data, gv_session);
+			lo_kmeans.m_kmeans(gt_data, gv_session);
 			
 			break;
 

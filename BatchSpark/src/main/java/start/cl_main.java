@@ -29,7 +29,7 @@ public class cl_main {
 	
 	private static int gv_submit = 0; //1=Cluster 
 	
-	private static int gv_batch = 5;
+	private static int gv_batch = 6;
 	
 	private Dataset<Row> gt_data;
 	
@@ -117,7 +117,7 @@ public class cl_main {
 			
 			break;
 						
-		case 5: //Análises
+		case 5: //Processa e salva as Análises na tabela
 					
 			go_select.m_conf_phoenix(gc_table, "TotaisConn", gv_session);
 			
@@ -126,8 +126,19 @@ public class cl_main {
 			go_processa.m_start_analyzes(gt_data);			
 			
 			break;
-		}		
+			
+		case 6:
+			
+			go_select.m_conf_phoenix("LOG_ANALYZES2", "Resultados", gv_session);
+			
+			gt_data = go_select.m_seleciona_results("2018-12-04 10:57:00.000", "ORIG_H_P");
+			
+			go_processa.m_kmeans(gt_data, gv_session);
+			
+			break;
 
+		}		
+				
 	}
 	
 	public static void m_conf_spark(){

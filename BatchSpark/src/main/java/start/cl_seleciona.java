@@ -213,4 +213,24 @@ public class cl_seleciona {
 				
 	}
 
+	public Dataset<Row> m_seleciona_results(String lv_stamp, String lv_tipo){
+		
+		Dataset<Row> lt_data;	
+		
+		lt_data = gv_session
+			      .sqlContext()
+			      .read()
+			      .format(gc_phoenix)
+			      .options(gv_phoenix)							   
+			      .load()			      			      
+			      .filter(col("TIPO").equalTo(lv_tipo))
+				  .filter(col("TS_CODE").gt(lv_stamp))
+				  .filter(col("COUNT").isNull()).limit(100);
+			     		
+		System.out.println("Conexões Resultado: \t"+lt_data.count() + "\n\n");
+		
+		return lt_data;
+		
+	}
+	
 }

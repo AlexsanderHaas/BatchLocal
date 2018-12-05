@@ -2,19 +2,11 @@ package start;
 
 import static org.apache.spark.sql.functions.col;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
-
-import scala.collection.Seq;
-import scala.collection.JavaConverters;
-
-//import org.apache.spark.ml.evaluation.ClusteringEvaluator;
 
 import static org.apache.spark.sql.functions.col;
 
@@ -24,7 +16,7 @@ public class cl_processa {
 		
 	final static String gc_conn_ip = "CONN_IP1";	
 	
-	final static String gc_analyzes = "LOG_ANALYZES2";
+	final static String gc_totais = "LOG_TOTAIS";
 	
 	final static String gc_conn = "CONN";
 	final static String gc_dns  = "DNS";
@@ -302,135 +294,74 @@ public class cl_processa {
 		
 		final String lc_orig_h_resp_h 	  = "ORIG_H_RESP_H";
 		final String lc_orig_h_p_resp_h_p = "ORIG_H_P_RESP_H_P";
-										
-		//Colunas a somar
 		
-		String[] lv_sum = new String[5]; //Colunas a somar
-		            
-		lv_sum[0] = gc_duration;
-		lv_sum[1] = gc_orig_pkts;
-		lv_sum[2] = gc_orig_bytes;
-		lv_sum[3] = gc_resp_pkts;
-	    lv_sum[4] = gc_resp_bytes;
+		String lc_v = ", ";
 		
-		Column[] lv_group = new Column[(Integer) 1]; //Colunas a agrupar (Não pode deixar posições vazias)
-		
+		String lv_group;
+				
 //-----------Conexões por PROTOCOLO--------------------------------------//
-		
-		lv_group[0] = new Column(gc_proto);
+				
 		
 		m_group_sum(lt_data, gc_proto, lc_proto, "Conexões por Protocolo");
 		
-/*//-----------Conexões por SERVIÇO--------------------------------------//
+//-----------Conexões por SERVIÇO--------------------------------------//
 		
-		lv_group[0] = new Column(gc_service);
-				
-		m_group_sum(lt_data, lv_group, lv_sum, lc_service, "Conexões por Serviço");	
+		m_group_sum(lt_data, gc_service, lc_service, "Conexões por Serviço");	
 		
 //-----------Conexões IP Origem--------------------------------------//
 		
-		lv_group[0] = new Column(gc_orig_h);
+		m_group_sum(lt_data, gc_orig_h, lc_orig_h, "Conexões por IP Origem");
 						
-		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h, "Conexões por IP Origem");
-		
-		lv_group[0] = new Column(gc_orig_p);
-		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_p,"Conexões por Portas Origem");	
-		
-		lv_group = new Column[(Integer) 2];
-		
-		lv_group[0] = new Column(gc_orig_h);
-		
-		lv_group[1] = new Column(gc_orig_p);
-		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_p, "Conexões por IP e Porta Origem");
-		
-		lv_group[0] = new Column(gc_orig_h);
-		
-		lv_group[1] = new Column(gc_proto);
-		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_proto, "Conexões por IP Origem e Protocolo");
+		m_group_sum(lt_data, gc_orig_p, lc_orig_p,"Conexões por Portas Origem");	
 				
-		lv_group[0] = new Column(gc_orig_h);
+		lv_group = gc_orig_h + lc_v + gc_orig_p; 
+				
+		m_group_sum(lt_data, lv_group, lc_orig_h_p, "Conexões por IP e Porta Origem");
+				
+		lv_group = gc_orig_h + lc_v + gc_proto;
 		
-		lv_group[1] = new Column(gc_service);
+		m_group_sum(lt_data, lv_group, lc_orig_h_proto, "Conexões por IP Origem e Protocolo");				
 		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_service, "Conexões por IP Origem e Serviço");
-						
-		lv_group = new Column[(Integer) 3];
+		lv_group = gc_orig_h + lc_v + gc_service;
 		
-		lv_group[0] = new Column(gc_orig_h);
+		m_group_sum(lt_data, lv_group, lc_orig_h_service, "Conexões por IP Origem e Serviço");
+								
+		lv_group = gc_orig_h + lc_v + gc_orig_p + lc_v + gc_resp_h;
 		
-		lv_group[1] = new Column(gc_orig_p);
-		
-		lv_group[2] = new Column(gc_resp_h);
-		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_p_resp_h,"Conexões por IP Origem e Porta com IP Resposta");
+		m_group_sum(lt_data, lv_group, lc_orig_h_p_resp_h,"Conexões por IP Origem e Porta com IP Resposta");
 		
 		
 //-----------Conexões IP Resposta--------------------------------------//
 		
-		lv_group = new Column[(Integer) 1];
+		m_group_sum(lt_data, gc_resp_h, lc_resp_h, "Conexões por IP Resposta");
 		
-		lv_group[0] = new Column(gc_resp_h);
+		m_group_sum(lt_data, gc_resp_p, lc_resp_p, "Conexões por Portas Resposta");
 		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h, "Conexões por IP Resposta");
+		lv_group = gc_resp_h + lc_v + gc_resp_p;
 		
-		lv_group[0] = new Column(gc_resp_p);
+		m_group_sum(lt_data, lv_group, lc_resp_h_p, "Conexões por IP e Porta Resposta");
 		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_p, "Conexões por Portas Resposta");
+		lv_group = gc_resp_h + lc_v + gc_proto;
 		
-		lv_group = new Column[(Integer) 2];
+		m_group_sum(lt_data, lv_group, lc_resp_h_proto, "Conexões por IP Resposta e Protocolo");		
 		
-		lv_group[0] = new Column(gc_resp_h);
+		lv_group = gc_resp_h + lc_v + gc_service;
 		
-		lv_group[1] = new Column(gc_resp_p);
+		m_group_sum(lt_data, lv_group, lc_resp_h_service, "Conexões por IP Resposta e Serviço");
 		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h_p, "Conexões por IP e Porta Resposta");
+		lv_group = gc_resp_h + lc_v + gc_resp_p + lc_v + gc_orig_h;
 		
-		lv_group[0] = new Column(gc_resp_h);
-		
-		lv_group[1] = new Column(gc_proto);
-		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h_proto, "Conexões por IP Resposta e Protocolo");
-		
-		lv_group[0] = new Column(gc_resp_h);
-		
-		lv_group[1] = new Column(gc_service);
-		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h_service, "Conexões por IP Resposta e Serviço");
-		
-		lv_group = new Column[(Integer) 3];
-		
-		lv_group[0] = new Column(gc_resp_h);
-		
-		lv_group[1] = new Column(gc_resp_p);
-		
-		lv_group[2] = new Column(gc_orig_h);
-		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_resp_h_p_orig_h, "Conexões por IP Resposta e Porta com IP Origem");
+		m_group_sum(lt_data, lv_group, lc_resp_h_p_orig_h, "Conexões por IP Resposta e Porta com IP Origem");
 		
 //-----------Conexões IP Origem com IP Resposta--------------------------------------//
 		
-		lv_group = new Column[(Integer) 2];
+		lv_group = gc_orig_h + lc_v + gc_resp_h;
 		
-		lv_group[0] = new Column(gc_orig_h);
+		m_group_sum(lt_data, lv_group, lc_orig_h_resp_h, "Conexões por IP Origem e IP Resposta");		
 		
-		lv_group[1] = new Column(gc_resp_h);
+		lv_group = gc_orig_h + lc_v + gc_orig_p + lc_v + gc_resp_h + lc_v + gc_resp_p;
 		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_resp_h, "Conexões por IP Origem e IP Resposta");		
-		
-		lv_group = new Column[(Integer) 4];
-		
-		lv_group[0] = new Column(gc_orig_h);
-		
-		lv_group[1] = new Column(gc_orig_p);
-		
-		lv_group[2] = new Column(gc_resp_h);
-		
-		lv_group[3] = new Column(gc_resp_p);
-		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_p_resp_h_p, "Conexões por IP Origem e Porta com IP Resposta e Porta");*/
+		m_group_sum(lt_data, lv_group, lc_orig_h_p_resp_h_p, "Conexões por IP Origem e Porta com IP Resposta e Porta");
 		
 	}
 		
@@ -469,7 +400,7 @@ public class cl_processa {
 		
 		lt_data.createOrReplaceTempView("LOG"); //cria uma tabela temporaria, para acessar via SQL				
 			
-		System.out.println("SQL: "+lv_sql);
+		//System.out.println("SQL: "+lv_sql);
 				
 		lt_res = lt_data.sparkSession()
 						  .sql(lv_sql);	
@@ -479,7 +410,9 @@ public class cl_processa {
 				       .withColumn("TS_CODE", functions.lit(gv_stamp))
 				       .withColumn("ROW_ID", functions.monotonically_increasing_id());
 		
-		cl_util.m_show_dataset(lt_res, lv_desc + "-JOIN:");
+		cl_util.m_show_dataset(lt_res, lv_desc + "-RES:");
+		
+		cl_util.m_save_log(lt_res, gc_totais);
 		
 		long lv_f = ( System.currentTimeMillis() - lv_i ) / 1000;
 		

@@ -27,7 +27,7 @@ public class cl_main {
 	
 	private Date gv_time = new Date();
 	
-	private static int gv_submit = 0; //1=Cluster 
+	private static int gv_submit = 1; //1=Cluster 
 	
 	private static int gv_batch = 5;
 	

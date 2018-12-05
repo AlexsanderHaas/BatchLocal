@@ -13,9 +13,9 @@ public class cl_util {
 		
 		System.out.println("\n" + lv_desc + "\t" + lt_data.count());
 		
-		lt_data.printSchema();
+		//lt_data.printSchema();
 		
-		lt_data.show();
+		lt_data.show(5);
 						
 	}
 	

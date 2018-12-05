@@ -43,8 +43,8 @@ public class cl_processa {
 	final static String gc_orig_pkts    = "ORIG_PKTS";
 	final static String gc_orig_bytes   = "ORIG_BYTES";
 	final static String gc_resp_pkts	= "RESP_PKTS";
-	final static String gc_resp_bytes   = "RESP_BYTES";
-					
+	final static String gc_resp_bytes   = "RESP_BYTES";						
+	
 //---------ATRIBUTOS---------//
 	
 	private cl_seleciona go_select;
@@ -319,7 +319,7 @@ public class cl_processa {
 		
 		lv_group[0] = new Column(gc_proto);
 		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_proto, "Conexões por Protocolo");
+		m_group_sum(lt_data, gc_proto, lc_proto, "Conexões por Protocolo");
 		
 /*//-----------Conexões por SERVIÇO--------------------------------------//
 		
@@ -435,143 +435,57 @@ public class cl_processa {
 	}
 		
 	public void m_group_sum(Dataset<Row> lt_data, 									
-						   Column[] lv_cols_g, 
-						   String[] lv_cols_s,
-						   String   lv_tipo,
-						   String   lv_desc) {
+						    String   lv_group, 
+						    String   lv_tipo,
+						    String   lv_desc) {
+		
+		final String lc_table = "LOG"; 
+		
+		final String lc_duration     = "SUM(DURATION) AS DURATION, ";
+		final String lc_orig_pkts    = "SUM(ORIG_PKTS) AS ORIG_PKTS, ";
+		final String lc_orig_bytes   = "SUM(ORIG_BYTES) AS ORIG_BYTES, ";
+		final String lc_resp_pkts	 = "SUM(RESP_PKTS) AS RESP_PKTS, ";
+		final String lc_resp_bytes   = "SUM(RESP_BYTES) AS RESP_BYTES ";	
+		
+		final String lv_sum = lc_duration   + 
+							  lc_orig_pkts  + 
+							  lc_orig_bytes +
+							  lc_resp_pkts  +
+							  lc_resp_bytes;
+		
+		String lv_grp = lv_group + ", COUNT(*) AS COUNT, ";
+		
+		String lv_sql = "SELECT " +
+						lv_grp    +
+						lv_sum    +
+						"FROM "   + lc_table +
+						" GROUP BY "+ lv_group;
+		
+		Dataset<Row> lt_res;
 		
 		long lv_i = System.currentTimeMillis();  
+				
+		lv_i = System.currentTimeMillis();  			
 		
-		Dataset<Row> lt_sum;
-		
-		Dataset<Row> lt_group;
-		
-		Dataset<Row> lt_join;
-		
-		lt_group = lt_data.groupBy(lv_cols_g)	
-				  .count()
-				  .sort(col("COUNT").desc());
-		
-		lt_group = lt_group.withColumn("TIPO", functions.lit(lv_tipo))
-						   .withColumn("TS_FILTRO", functions.lit(gv_stamp_filtro))						   
-						   .withColumn("TS_CODE", functions.lit(gv_stamp))
-						   .withColumn("ROW_ID", functions.monotonically_increasing_id());
-		
-		//cl_util.m_save_log(lt_group, gc_analyzes);				
-		
-		//cl_util.m_show_dataset(lt_group, lv_desc + "-Group:");	
-		
-		lt_sum = lt_data.groupBy(lv_cols_g)				 		  
-						.sum(lv_cols_s);	
-		
-		/*lt_sum = lt_sum.withColumn("TIPO", functions.lit(lv_tipo))
-					   .withColumn("TS_FILTRO", functions.lit(gv_stamp_filtro))
-					   .withColumn("TS_CODE", functions.lit(gv_stamp))
-					   .withColumn("ROW_ID", functions.monotonically_increasing_id());*/
-		
-		//cl_util.m_save_log(lt_sum, gc_analyzes);
-		
-		//cl_util.m_show_dataset(lt_sum, lv_desc + "-SUM:");
-		
-		int lv_col = lv_cols_g.length;
-		
-		int lv_all;
-		
-		lv_all = lv_col + 6;
-		
-		System.out.println("\nALL:"+lv_all);
-		
-		Column[] lv_group = new Column[(Integer) lv_all]; //Colunas a agrupar (Não pode deixar posições vazias)
-		
-		System.out.println("\nALL:"+lv_all+"\t LEN:"+lv_group.length);
-		
-		//lv_group = lv_cols_g.clone();
-		
-		List<String> lv_cond = new ArrayList<String>();//null; //= new String[lv_col]; //Colunas a somar
-		String[] lv_sum = new String[6]; //Colunas a somar
-        
-		lv_sum[0] = "sum("+gc_duration+")";
-		lv_sum[1] = "sum("+gc_orig_pkts+")";
-		lv_sum[2] = "sum("+gc_orig_bytes+")";
-		lv_sum[3] = "sum("+gc_resp_pkts+")";
-	    lv_sum[4] = "sum("+gc_resp_bytes+")";	    
-	    lv_sum[5] = "COUNT";
-		
-	    int lv_p = 0;
-	    
-	    for(int x=0; x<lv_col; x++) {
-	    	
-	    	System.out.println("\nCOLUNA["+x+"]:\t"+lv_cols_g[lv_p]+"\t LEN:"+lv_cols_g.length);
-	    	lv_group[x] = lv_cols_g[x];
-	    	
-	    	lv_cond.add(lv_cols_g[x].toString());
-	    	
-	    }
-	    
-	    System.out.println("\nCOND:"+lv_cond);
-	    
-		for(int i=lv_col; i<lv_all; i++) {
+		lt_data.createOrReplaceTempView("LOG"); //cria uma tabela temporaria, para acessar via SQL				
 			
-			System.out.println("\nCOLUNA["+i+"]:\t"+lv_sum[lv_p]+"\tVALOR atual:"+lv_group[i-1].toString()+"\t LEN:"+lv_group.length);
-			
-			lv_group[i] = new Column (lv_sum[lv_p]);						
-			
-			//lv_cond.add(lv_sum[lv_p]);
-			
-			lv_p ++;
-			
-		}
+		System.out.println("SQL: "+lv_sql);
+				
+		lt_res = lt_data.sparkSession()
+						  .sql(lv_sql);	
 		
-		Seq<String> lv_seq;
+		lt_res = lt_res.withColumn("TIPO", functions.lit(lv_tipo))
+				       .withColumn("TS_FILTRO", functions.lit(gv_stamp_filtro))						   
+				       .withColumn("TS_CODE", functions.lit(gv_stamp))
+				       .withColumn("ROW_ID", functions.monotonically_increasing_id());
 		
-		lv_seq = JavaConverters.asScalaIteratorConverter(lv_cond.iterator()).asScala().toSeq();
-		
-		lt_join = lt_group.join(lt_sum, lv_seq);//(lt_sum, lv_cond)
-						 // .select(lv_cols_g);
-		
-		cl_util.m_show_dataset(lt_join, lv_desc + "-JOIN:");
+		cl_util.m_show_dataset(lt_res, lv_desc + "-JOIN:");
 		
 		long lv_f = ( System.currentTimeMillis() - lv_i ) / 1000;
 		
-		System.out.println("1) A função foi executada em:\t" + lv_f +" Segundos");
-		
-		lv_i = System.currentTimeMillis();  			
-		
-		lt_data.createOrReplaceTempView("TESTE"); //cria uma tabela temporaria, para acessar via SQL
-				
-		String lv_sql;
-		lv_sql = "SELECT PROTO, COUNT(*) AS COUNT, "	+			 
-				"SUM(DURATION), "  +
-				"SUM(ORIG_PKTS), " + 
-				"SUM(ORIG_BYTES)," + 
-				"SUM(RESP_PKTS) ," + 
-				"SUM(RESP_BYTES) "
-				+ "FROM TESTE "
-				+ "WHERE TIPO = 'CONN'"
-				+ " GROUP BY PROTO"; //UID, TS_CODE FROM JSON6 WHERE TIPO = 'CONN' ";
-		
-		System.out.println("SQL: "+lv_sql);
-		
-		
-		lt_join = lt_data
-				.sparkSession()
-				.sql(lv_sql);	
-		
-		lt_join = lt_join.withColumn("TIPO", functions.lit(lv_tipo))
-				   .withColumn("TS_FILTRO", functions.lit(gv_stamp_filtro))						   
-				   .withColumn("TS_CODE", functions.lit(gv_stamp))
-				   .withColumn("ROW_ID", functions.monotonically_increasing_id());
-		
-		cl_util.m_show_dataset(lt_join, lv_desc + "-JOIN:");
-		
-		lv_f = ( System.currentTimeMillis() - lv_i ) / 1000;
-		
-		System.out.println("2) A função foi executada em:\t" + lv_f +" Segundos");
-		
-		
+		System.out.println(lv_tipo+") A função foi executada em:\t" + lv_f +" Segundos");
+			
 	}
-	
-	
 	
 }
 

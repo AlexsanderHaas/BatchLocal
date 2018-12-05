@@ -17,7 +17,7 @@ public class cl_kmeans {
 		
 		Dataset<Row> lt_sum;
 		
-		lt_sum = lt_data.filter(col("SUM(DURATION)").isNotNull())
+		lt_sum = lt_data.filter(col("SUM(DURATION)").isNotNull()) //não pode ter valores nulos
 						.filter(col("SUM(ORIG_PKTS)").isNotNull())
 						.filter(col("SUM(ORIG_BYTES)").isNotNull());
 				

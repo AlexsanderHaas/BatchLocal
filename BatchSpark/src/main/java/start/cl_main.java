@@ -29,7 +29,7 @@ public class cl_main {
 	
 	private static int gv_submit = 0; //1=Cluster 
 	
-	private static int gv_batch = 6;
+	private static int gv_batch = 5;
 	
 	private Dataset<Row> gt_data;
 	

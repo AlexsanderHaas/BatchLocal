@@ -2,11 +2,17 @@ package start;
 
 import static org.apache.spark.sql.functions.col;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
+
+import scala.collection.Seq;
+import scala.collection.JavaConverters;
 
 //import org.apache.spark.ml.evaluation.ClusteringEvaluator;
 
@@ -315,7 +321,7 @@ public class cl_processa {
 		
 		m_group_sum(lt_data, lv_group, lv_sum, lc_proto, "Conexões por Protocolo");
 		
-//-----------Conexões por SERVIÇO--------------------------------------//
+/*//-----------Conexões por SERVIÇO--------------------------------------//
 		
 		lv_group[0] = new Column(gc_service);
 				
@@ -424,20 +430,23 @@ public class cl_processa {
 		
 		lv_group[3] = new Column(gc_resp_p);
 		
-		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_p_resp_h_p, "Conexões por IP Origem e Porta com IP Resposta e Porta");
+		m_group_sum(lt_data, lv_group, lv_sum, lc_orig_h_p_resp_h_p, "Conexões por IP Origem e Porta com IP Resposta e Porta");*/
 		
 	}
-	
-	
+		
 	public void m_group_sum(Dataset<Row> lt_data, 									
 						   Column[] lv_cols_g, 
 						   String[] lv_cols_s,
 						   String   lv_tipo,
 						   String   lv_desc) {
 		
+		long lv_i = System.currentTimeMillis();  
+		
 		Dataset<Row> lt_sum;
 		
 		Dataset<Row> lt_group;
+		
+		Dataset<Row> lt_join;
 		
 		lt_group = lt_data.groupBy(lv_cols_g)	
 				  .count()
@@ -448,21 +457,116 @@ public class cl_processa {
 						   .withColumn("TS_CODE", functions.lit(gv_stamp))
 						   .withColumn("ROW_ID", functions.monotonically_increasing_id());
 		
-		cl_util.m_save_log(lt_group, gc_analyzes);				
+		//cl_util.m_save_log(lt_group, gc_analyzes);				
 		
-		cl_util.m_show_dataset(lt_group, lv_desc + "-Group:");	
+		//cl_util.m_show_dataset(lt_group, lv_desc + "-Group:");	
 		
 		lt_sum = lt_data.groupBy(lv_cols_g)				 		  
 						.sum(lv_cols_s);	
 		
-		lt_sum = lt_sum.withColumn("TIPO", functions.lit(lv_tipo))
+		/*lt_sum = lt_sum.withColumn("TIPO", functions.lit(lv_tipo))
 					   .withColumn("TS_FILTRO", functions.lit(gv_stamp_filtro))
 					   .withColumn("TS_CODE", functions.lit(gv_stamp))
-					   .withColumn("ROW_ID", functions.monotonically_increasing_id());
+					   .withColumn("ROW_ID", functions.monotonically_increasing_id());*/
 		
-		cl_util.m_save_log(lt_sum, gc_analyzes);
+		//cl_util.m_save_log(lt_sum, gc_analyzes);
 		
-		cl_util.m_show_dataset(lt_sum, lv_desc + "-SUM:");
+		//cl_util.m_show_dataset(lt_sum, lv_desc + "-SUM:");
+		
+		int lv_col = lv_cols_g.length;
+		
+		int lv_all;
+		
+		lv_all = lv_col + 6;
+		
+		System.out.println("\nALL:"+lv_all);
+		
+		Column[] lv_group = new Column[(Integer) lv_all]; //Colunas a agrupar (Não pode deixar posições vazias)
+		
+		System.out.println("\nALL:"+lv_all+"\t LEN:"+lv_group.length);
+		
+		//lv_group = lv_cols_g.clone();
+		
+		List<String> lv_cond = new ArrayList<String>();//null; //= new String[lv_col]; //Colunas a somar
+		String[] lv_sum = new String[6]; //Colunas a somar
+        
+		lv_sum[0] = "sum("+gc_duration+")";
+		lv_sum[1] = "sum("+gc_orig_pkts+")";
+		lv_sum[2] = "sum("+gc_orig_bytes+")";
+		lv_sum[3] = "sum("+gc_resp_pkts+")";
+	    lv_sum[4] = "sum("+gc_resp_bytes+")";	    
+	    lv_sum[5] = "COUNT";
+		
+	    int lv_p = 0;
+	    
+	    for(int x=0; x<lv_col; x++) {
+	    	
+	    	System.out.println("\nCOLUNA["+x+"]:\t"+lv_cols_g[lv_p]+"\t LEN:"+lv_cols_g.length);
+	    	lv_group[x] = lv_cols_g[x];
+	    	
+	    	lv_cond.add(lv_cols_g[x].toString());
+	    	
+	    }
+	    
+	    System.out.println("\nCOND:"+lv_cond);
+	    
+		for(int i=lv_col; i<lv_all; i++) {
+			
+			System.out.println("\nCOLUNA["+i+"]:\t"+lv_sum[lv_p]+"\tVALOR atual:"+lv_group[i-1].toString()+"\t LEN:"+lv_group.length);
+			
+			lv_group[i] = new Column (lv_sum[lv_p]);						
+			
+			//lv_cond.add(lv_sum[lv_p]);
+			
+			lv_p ++;
+			
+		}
+		
+		Seq<String> lv_seq;
+		
+		lv_seq = JavaConverters.asScalaIteratorConverter(lv_cond.iterator()).asScala().toSeq();
+		
+		lt_join = lt_group.join(lt_sum, lv_seq);//(lt_sum, lv_cond)
+						 // .select(lv_cols_g);
+		
+		cl_util.m_show_dataset(lt_join, lv_desc + "-JOIN:");
+		
+		long lv_f = ( System.currentTimeMillis() - lv_i ) / 1000;
+		
+		System.out.println("1) A função foi executada em:\t" + lv_f +" Segundos");
+		
+		lv_i = System.currentTimeMillis();  			
+		
+		lt_data.createOrReplaceTempView("TESTE"); //cria uma tabela temporaria, para acessar via SQL
+				
+		String lv_sql;
+		lv_sql = "SELECT PROTO, COUNT(*) AS COUNT, "	+			 
+				"SUM(DURATION), "  +
+				"SUM(ORIG_PKTS), " + 
+				"SUM(ORIG_BYTES)," + 
+				"SUM(RESP_PKTS) ," + 
+				"SUM(RESP_BYTES) "
+				+ "FROM TESTE "
+				+ "WHERE TIPO = 'CONN'"
+				+ " GROUP BY PROTO"; //UID, TS_CODE FROM JSON6 WHERE TIPO = 'CONN' ";
+		
+		System.out.println("SQL: "+lv_sql);
+		
+		
+		lt_join = lt_data
+				.sparkSession()
+				.sql(lv_sql);	
+		
+		lt_join = lt_join.withColumn("TIPO", functions.lit(lv_tipo))
+				   .withColumn("TS_FILTRO", functions.lit(gv_stamp_filtro))						   
+				   .withColumn("TS_CODE", functions.lit(gv_stamp))
+				   .withColumn("ROW_ID", functions.monotonically_increasing_id());
+		
+		cl_util.m_show_dataset(lt_join, lv_desc + "-JOIN:");
+		
+		lv_f = ( System.currentTimeMillis() - lv_i ) / 1000;
+		
+		System.out.println("2) A função foi executada em:\t" + lv_f +" Segundos");
 		
 		
 	}

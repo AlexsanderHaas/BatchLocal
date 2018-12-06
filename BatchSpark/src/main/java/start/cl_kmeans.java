@@ -1,8 +1,6 @@
 package start;
 
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.date_format;
-import static org.apache.spark.sql.functions.sum;
+import static org.apache.spark.sql.functions.*;
 
 import org.apache.spark.ml.clustering.KMeans;
 import org.apache.spark.ml.clustering.KMeansModel;
@@ -15,12 +13,15 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 import org.apache.spark.sql.catalyst.expressions.Minute;
 import org.apache.spark.sql.catalyst.expressions.aggregate.Sum;
+
+import scala.Array;
+
 import org.apache.spark.sql.Column;
 
 public class cl_kmeans {
 
 	//------------------Colunas------------------------//
-	
+	final static String gc_ts 			= "TS";
 	final static String gc_proto 		= "PROTO";
 	final static String gc_service		= "SERVICE";
 	final static String gc_orig_h		= "ID_ORIG_H";
@@ -34,79 +35,70 @@ public class cl_kmeans {
 	final static String gc_resp_pkts	= "RESP_PKTS";
 	final static String gc_resp_bytes   = "RESP_BYTES";		
 	
+	final static String gc_count   		= "COUNT";
+	
+	final static String lc_duration     = "sum(DURATION)"; 
+	final static String lc_orig_pkts    = "sum(ORIG_PKTS)";
+	final static String lc_orig_bytes   = "sum(ORIG_BYTES)";
+	final static String lc_resp_pkts	= "sum(RESP_PKTS)";
+	final static String lc_resp_bytes   = "sum(RESP_BYTES)";	
+	
+	
 	Dataset<Row> gt_data;
 	
 	public Dataset<Row> m_normaliza_dados(Dataset<Row> lt_data) {	
-		
-		final String lc_table = "LOG"; 
-		
-		final String lc_ts = "TS";
-		
-		String lc_v = ", ";
-		
-		String lv_grp =  cl_processa.gc_orig_h + lc_v +
-						 cl_processa.gc_resp_h + lc_v +
-						 cl_processa.gc_resp_p + lc_v +
-						 cl_processa.gc_proto  + lc_v +
-						 cl_processa.gc_service;
-		
-		String lv_cols = lv_grp + ", date_format(TS, 'dd.MM.yyyy HH:mm') AS TS" + ", COUNT(*) AS COUNT, ";
-		
-		lv_grp = lv_grp + lc_v + lc_ts;
-		
-		String lv_sum = cl_processa.lv_sum + lc_v +
-						"SUM(ORIG_IP_BYTES) AS ORIG_IP_BYTES , " +
-						"SUM(RESP_IP_BYTES) AS RESP_IP_BYTES ";
-		
-		String lv_sql = "SELECT " +
-						lv_cols    +
-						lv_sum    +
-						"FROM "   + lc_table +
-						" GROUP BY "+ lv_grp;
-		
+						
 		Dataset<Row> lt_res;
 		
-		cl_util.m_time_start();
+		Dataset<Row> lt_count;
 		
-		lt_data.createOrReplaceTempView(lc_table); //cria uma tabela temporaria, para acessar via SQL				
-			
-		System.out.println("SQL: "+lv_sql);
-				
-		lt_res = lt_data.sparkSession()
-						.sql(lv_sql);//.withColumn("TS", date_format(col("TS"), "dd.MM.yyyy HH:mm"));;	
+		cl_util.m_time_start();				
 		
-		cl_util.m_show_dataset(lt_res, "1) Normaliza Kmeans");				
-				
-		lt_res = lt_res.select("*")					   
-					   //.withColumn("TS", date_format(col("TS"), "dd.MM.yyyy HH:mm"))					   
-					   .groupBy( col(cl_processa.gc_orig_h),
-							     col(cl_processa.gc_resp_h), 
-							     col(cl_processa.gc_resp_p), 
-							     col(cl_processa.gc_proto),  
-		                         col(cl_processa.gc_service),
-		                         col(lc_ts))
-					   .sum(cl_processa.gc_duration,  
-							cl_processa.gc_orig_pkts, 
-							cl_processa.gc_orig_bytes,
-							cl_processa.gc_resp_pkts,	
-							cl_processa.gc_resp_bytes, "COUNT");
+		lt_res = lt_data.select( gc_orig_h  ,
+				                 gc_resp_h  ,
+				                 gc_resp_p  ,
+				                 gc_proto   ,
+				                 gc_service ,
+				                 gc_ts,
+				                 gc_duration,
+				                 gc_orig_pkts, 
+				                 gc_orig_bytes,
+				                 gc_resp_pkts,	
+				                 gc_resp_bytes )	   
+					   .withColumn(gc_ts, date_format(col(gc_ts), "dd.MM.yyyy HH:mm"))					   
+					   .groupBy( col(gc_orig_h),
+							     col(gc_resp_h), 
+							     col(gc_resp_p), 
+							     col(gc_proto),  
+		                         col(gc_service),
+		                         col(gc_ts))
+					   .agg(sum(gc_duration), 
+							sum(gc_orig_pkts), 
+							sum(gc_orig_bytes),
+							sum(gc_resp_pkts),	
+							sum(gc_resp_bytes),
+							count("*"))
+					   .withColumnRenamed("count(1)", gc_count)
+					   .withColumnRenamed(lc_duration, gc_duration)
+					   .withColumnRenamed(lc_orig_pkts, gc_orig_pkts)
+					   .withColumnRenamed(lc_orig_bytes, gc_orig_bytes)
+					   .withColumnRenamed(lc_resp_pkts, gc_resp_pkts)
+					   .withColumnRenamed(lc_resp_bytes, gc_resp_bytes);
+					   
 		
+		lt_res = lt_res.sort(gc_orig_h,
+							 gc_ts,
+							 gc_count);
 		
+		cl_util.m_show_dataset(lt_res, "1) Normaliza Kmeans");									
 		
+		lt_res.filter(col(gc_resp_h).equalTo("205.174.165.73"))
+			  .groupBy(gc_orig_h)
+			  .count()
+			  .sort(col("count").desc())
+			  .show();;
 		
-					   //.count();
-				
-	/*	lt_res = lt_data.select(col("ID_ORIG_H"),sum("DURATION"))					   
-				        .withColumn("TS", date_format(col("TS"), "dd.MM.yyyy HH:mm"))
-				        .groupBy(col("ID_ORIG_H"),col("TS")).count();*/					   
-				        //.groupBy( col(cl_processa.gc_orig_h), col("sum(DURATION)"));					   			
-				   //.count();
-		
-		//lt_res = lt_res.sort(col("COUNT").desc());
-		
-		cl_util.m_show_dataset(lt_res, "2) Normaliza Kmeans");									
-		
-		cl_util.m_save_csv(lt_res, "DDoS_HTTP_TG");			
+		//cl_util.m_save_csv(lt_res, "DDoS_HTTP_NEW");			
 		
 		cl_util.m_time_end();
 		
@@ -118,13 +110,13 @@ public class cl_kmeans {
 	public void m_ddos_kmeans(Dataset<Row> lt_data, SparkSession lv_session) {
 				
 		VectorAssembler lv_assembler = new VectorAssembler()
-										.setInputCols(new String[]{"COUNT", "ORIG_IP_BYTES", "RESP_IP_BYTES"})
+										.setInputCols(new String[]{"COUNT", "ORIG_BYTES", "RESP_BYTES"}) //era orig_ip_bytes
 										.setOutputCol("features");
 		
 		Dataset<Row> lt_http = lt_data.filter(col(cl_processa.gc_service).equalTo("http"))
-									  .filter(col("ORIG_IP_BYTES").isNotNull())
-									  .filter(col("RESP_IP_BYTES").isNotNull())
-									  .sort("ORIG_IP_BYTES");
+									  .filter(col("ORIG_BYTES").isNotNull())
+									  .filter(col("RESP_BYTES").isNotNull())
+									  .sort("ORIG_BYTES");
 		
 		cl_util.m_show_dataset(lt_http, "Dados http:");
 		

@@ -20,7 +20,7 @@ public class cl_processa {
 	
 	final static String gc_conn = "CONN";
 	final static String gc_dns  = "DNS";
-	final static String gc_http = "HTTP";
+	final static String gc_http = "HTTP";		
 	
 //------------------Colunas------------------------//
 	
@@ -35,7 +35,19 @@ public class cl_processa {
 	final static String gc_orig_pkts    = "ORIG_PKTS";
 	final static String gc_orig_bytes   = "ORIG_BYTES";
 	final static String gc_resp_pkts	= "RESP_PKTS";
-	final static String gc_resp_bytes   = "RESP_BYTES";						
+	final static String gc_resp_bytes   = "RESP_BYTES";	
+	
+	final static String lc_duration     = "SUM(DURATION) AS DURATION, ";
+	final static String lc_orig_pkts    = "SUM(ORIG_PKTS) AS ORIG_PKTS, ";
+	final static String lc_orig_bytes   = "SUM(ORIG_BYTES) AS ORIG_BYTES, ";
+	final static String lc_resp_pkts	= "SUM(RESP_PKTS) AS RESP_PKTS, ";
+	final static String lc_resp_bytes   = "SUM(RESP_BYTES) AS RESP_BYTES ";	
+	
+	final static String lv_sum = lc_duration   + 
+						         lc_orig_pkts  + 
+						         lc_orig_bytes +
+						         lc_resp_pkts  +
+						         lc_resp_bytes;	
 	
 //---------ATRIBUTOS---------//
 	
@@ -44,6 +56,8 @@ public class cl_processa {
 	private long gv_stamp_filtro; //Filtro da seleção de dados
 	
 	private long gv_stamp; //Stamp do inicio da execução
+	
+	private Dataset<Row> gt_data;
 	
 	public cl_processa(String lv_filtro, long lv_stamp){
 		
@@ -298,9 +312,12 @@ public class cl_processa {
 		String lc_v = ", ";
 		
 		String lv_group;
+		
+		//gt_data = lt_data;
+		
+		lt_data.createOrReplaceTempView("LOG"); //cria uma tabela temporaria, para acessar via SQL
 				
-//-----------Conexões por PROTOCOLO--------------------------------------//
-				
+//-----------Conexões por PROTOCOLO--------------------------------------//				
 		
 		m_group_sum(lt_data, gc_proto, lc_proto, "Conexões por Protocolo");
 		
@@ -371,19 +388,7 @@ public class cl_processa {
 						    String   lv_desc) {
 		
 		final String lc_table = "LOG"; 
-		
-		final String lc_duration     = "SUM(DURATION) AS DURATION, ";
-		final String lc_orig_pkts    = "SUM(ORIG_PKTS) AS ORIG_PKTS, ";
-		final String lc_orig_bytes   = "SUM(ORIG_BYTES) AS ORIG_BYTES, ";
-		final String lc_resp_pkts	 = "SUM(RESP_PKTS) AS RESP_PKTS, ";
-		final String lc_resp_bytes   = "SUM(RESP_BYTES) AS RESP_BYTES ";	
-		
-		final String lv_sum = lc_duration   + 
-							  lc_orig_pkts  + 
-							  lc_orig_bytes +
-							  lc_resp_pkts  +
-							  lc_resp_bytes;
-		
+				
 		String lv_grp = lv_group + ", COUNT(*) AS COUNT, ";
 		
 		String lv_sql = "SELECT " +
@@ -398,7 +403,7 @@ public class cl_processa {
 				
 		lv_i = System.currentTimeMillis();  			
 		
-		lt_data.createOrReplaceTempView("LOG"); //cria uma tabela temporaria, para acessar via SQL				
+		//lt_data.createOrReplaceTempView("LOG"); //cria uma tabela temporaria, para acessar via SQL				
 			
 		//System.out.println("SQL: "+lv_sql);
 				

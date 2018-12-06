@@ -9,11 +9,13 @@ public class cl_util {
 	
 	final static String gc_path_r = "/home/user/Documentos/batch_spark/";
 	
+	static long gv_ini;
+	
 	public static void m_show_dataset(Dataset<Row> lt_data, String lv_desc) {
 		
 		System.out.println("\n" + lv_desc + "\t" + lt_data.count());
 		
-		//lt_data.printSchema();
+		lt_data.printSchema();
 		
 		lt_data.show(5);
 						
@@ -49,5 +51,19 @@ public class cl_util {
 		}		
 					
 	}
+	
+	public static void m_time_start() {
+		
+		gv_ini = System.currentTimeMillis();  
+		
+	}
+	
+	public static void m_time_end() {
+		
+		long lv_f = ( System.currentTimeMillis() - gv_ini ) / 1000;
+		
+		System.out.println(" A função foi executada em:\t" + lv_f +" Segundos");
+		
+	}	
 	
 }

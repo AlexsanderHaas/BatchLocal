@@ -27,9 +27,9 @@ public class cl_main {
 	
 	private Date gv_time = new Date();
 	
-	private static int gv_submit = 1; //1=Cluster 
+	private static int gv_submit = 0; //1=Cluster 
 	
-	private static int gv_batch = 5;
+	private static int gv_batch = 6;
 	
 	private Dataset<Row> gt_data;
 	
@@ -129,13 +129,19 @@ public class cl_main {
 			
 		case 6:
 			
+			Dataset<Row> lt_res;
+			
 			cl_kmeans lo_kmeans = new cl_kmeans();
 			
-			go_select.m_conf_phoenix("LOG_ANALYZES2", "Resultados", gv_session);
+			go_select.m_conf_phoenix(gc_table, "K-means", gv_session);
 			
-			gt_data = go_select.m_seleciona_results("2018-12-04 10:57:00.000", "ORIG_H_P");
+			gt_data = go_select.m_seleciona(gc_stamp);
 			
-			lo_kmeans.m_kmeans(gt_data, gv_session);
+			lt_res = lo_kmeans.m_normaliza_dados(gt_data);
+			
+			//lo_kmeans.m_kmeans(gt_data, gv_session);
+			
+			//lo_kmeans.m_ddos_kmeans(lt_res, gv_session);
 			
 			break;
 

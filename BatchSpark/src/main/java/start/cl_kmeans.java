@@ -65,7 +65,8 @@ public class cl_kmeans {
 				                 gc_orig_bytes,
 				                 gc_resp_pkts,	
 				                 gc_resp_bytes )	   
-					   .withColumn(gc_ts, date_format(col(gc_ts), "dd.MM.yyyy HH:mm"))					   
+					   //.withColumn(gc_ts, date_format(col(gc_ts), "dd.MM.yyyy HH:mm"))					   
+					   .withColumn(gc_ts, date_format(col(gc_ts), "dd.MM.yyyy HH"))
 					   .groupBy( col(gc_orig_h),
 							     col(gc_resp_h), 
 							     col(gc_resp_p), 
@@ -92,13 +93,17 @@ public class cl_kmeans {
 		
 		cl_util.m_show_dataset(lt_res, "1) Normaliza Kmeans");									
 		
-		lt_res.filter(col(gc_resp_h).equalTo("205.174.165.73"))
-			  .groupBy(gc_orig_h)
-			  .count()
-			  .sort(col("count").desc())
-			  .show();;
+		lt_count = lt_res//.filter(col(gc_resp_h).equalTo("205.174.165.73"))
+			             .groupBy(gc_ts)
+			             .pivot(gc_orig_h)
+			             .sum(gc_count)
+			             .sort(col(gc_ts));
+			             //.count();
+			             //.sort(col("count").desc());
 		
-		//cl_util.m_save_csv(lt_res, "DDoS_HTTP_NEW");			
+		cl_util.m_show_dataset(lt_count, "1) IPS");
+		
+		//cl_util.m_save_csv(lt_count, "DDoS_HTTP_GRF");			
 		
 		cl_util.m_time_end();
 		
@@ -110,8 +115,9 @@ public class cl_kmeans {
 	public void m_ddos_kmeans(Dataset<Row> lt_data, SparkSession lv_session) {
 				
 		VectorAssembler lv_assembler = new VectorAssembler()
-										.setInputCols(new String[]{"COUNT", "ORIG_BYTES", "RESP_BYTES"}) //era orig_ip_bytes
-										.setOutputCol("features");
+										//.setInputCols(new String[]{"COUNT", "ORIG_BYTES", "RESP_BYTES"}) //era orig_ip_bytes
+				.setInputCols(new String[]{"COUNT"}) //era orig_ip_bytes						
+				.setOutputCol("features");
 		
 		Dataset<Row> lt_http = lt_data.filter(col(cl_processa.gc_service).equalTo("http"))
 									  .filter(col("ORIG_BYTES").isNotNull())

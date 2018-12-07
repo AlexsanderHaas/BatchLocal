@@ -141,7 +141,7 @@ public class cl_main {
 			
 			//lo_kmeans.m_kmeans(gt_data, gv_session);
 			
-			lo_kmeans.m_ddos_kmeans(lt_res, gv_session);
+			//lo_kmeans.m_ddos_kmeans(lt_res, gv_session);
 			
 			break;
 

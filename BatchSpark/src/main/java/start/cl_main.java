@@ -25,7 +25,9 @@ public class cl_main {
 	
 	final static String gc_stamp 		= "2018-12-02 21:57:00.000"; //por aqui ele considera o GMT -2 e no SQL no CMD é sem GMT
 	
-	final static String gc_http 		= "http"; 
+	final static String gc_http 		= "http";
+	
+	final static String gc_ssl 			= "ssl"; 
 	
 	//---------ATRIBUTOS---------//
 	
@@ -133,25 +135,33 @@ public class cl_main {
 			
 			break;
 			
-		case 6:
-			
-			Dataset<Row> lt_res;
-			
+		case 6: //DDOS K-means
+						
 			cl_kmeans lo_kmeans = new cl_kmeans(gc_stamp, gv_stamp);
 			
-			go_select.m_conf_phoenix(gc_table, "K-means", gv_session);
+			go_select.m_conf_phoenix(gc_table, "K-means DDoS", gv_session);
 			
 			gt_data = go_select.m_seleciona_conn(gc_stamp);
 			
 			lo_kmeans.m_start_kmeans_ddos(gv_session, gt_data, gc_http );
 			
-			//lt_res = lo_kmeans.m_normaliza_analise_ddos(gt_data, "http");					
+			lo_kmeans.m_start_kmeans_ddos(gv_session, gt_data, gc_ssl );
+				
+			break;
+		
+		case 7:
 			
-			//lo_kmeans.m_ddos_kmeans(lt_res, gv_session);
+			cl_kmeans lo_scan = new cl_kmeans(gc_stamp, gv_stamp);
+			
+			go_select.m_conf_phoenix(gc_table, "K-means SCAN PORT", gv_session);
+			
+			gt_data = go_select.m_seleciona_conn(gc_stamp);
+			
+			lo_scan.m_start_kmeans_ScanPort(gv_session, gt_data, gc_http );
 			
 			break;
 			
-		case 7: //Get resultados
+		case 8: //Get resultados
 			
 			String lv_stamp = "2018-12-09 00:01:00.000";
 			

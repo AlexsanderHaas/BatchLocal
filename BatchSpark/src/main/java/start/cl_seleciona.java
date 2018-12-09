@@ -51,7 +51,7 @@ public class cl_seleciona {
 			      .options(gv_phoenix)							   
 			      .load()			      
 			      //.filter("TIPO = 'CONN' OR TIPO = 'DNS'");//filter("TS_CODE = TO_TIMESTAMP ('"+gc_stamp+"')"); //" AND ( TIPO = 'CONN' OR TIPO = 'DNS' )");
-			      .filter(col("TS_CODE").gt(lv_stamp)).filter(col(cl_processa.gc_service).equalTo("http"));
+			      .filter(col("TS_CODE").gt(lv_stamp)); //.filter(col(cl_processa.gc_service).equalTo("http"));
 			      //.filter(col("TIPO").equalTo(gc_conn));*/
 							   		
 		//lv_data.createOrReplaceTempView(gv_table); //cria uma tabela temporaria, para acessar via SQL
@@ -228,6 +228,44 @@ public class cl_seleciona {
 				  .filter(col("COUNT").isNull());
 			     		
 		System.out.println("Conexões Resultado: \t"+lt_data.count() + "\n\n");
+		
+		return lt_data;
+		
+	}
+	
+	public Dataset<Row> m_select_LogTotais(String lv_stamp, String lv_tipo){
+		
+		Dataset<Row> lt_data;	
+		
+		lt_data = gv_session
+			      .sqlContext()
+			      .read()
+			      .format(gc_phoenix)
+			      .options(gv_phoenix)							   
+			      .load()			      			      
+			      .filter(col("TIPO").equalTo(lv_tipo))
+				  .filter(col("TS_CODE").gt(lv_stamp));
+			     		
+		cl_util.m_show_dataset(lt_data, lv_tipo+":LOG totais");
+		
+		return lt_data;
+		
+	}
+	
+	public Dataset<Row> m_select_LogKmeansDdos(String lv_stamp, String lv_tipo){
+		
+		Dataset<Row> lt_data;	
+		
+		lt_data = gv_session
+			      .sqlContext()
+			      .read()
+			      .format(gc_phoenix)
+			      .options(gv_phoenix)							   
+			      .load()			      			      
+			      .filter(col(cl_kmeans.gc_service).equalTo(lv_tipo))
+				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp));
+			     		
+		cl_util.m_show_dataset(lt_data, lv_tipo+":LOG totais");
 		
 		return lt_data;
 		

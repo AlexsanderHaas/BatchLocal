@@ -15,11 +15,17 @@ public class cl_main {
 	
 	//---------CONSTANTES---------//
 	
-	final static String gc_table = "JSON00";
+	final static String gc_table 		= "JSON00";
 	
-	final static String gc_conn_ip = "CONN_IP1";
+	final static String gc_kmeans_ddos 	= "LOG_KMEANS_DDOS";
 	
-	final static String gc_stamp = "2018-12-02 21:57:00.000"; //por aqui ele considera o GMT -2 e no SQL no CMD é sem GMT
+	final static String gc_totais 	    = "LOG_TOTAIS";
+	
+	final static String gc_conn_ip 		= "CONN_IP1";
+	
+	final static String gc_stamp 		= "2018-12-02 21:57:00.000"; //por aqui ele considera o GMT -2 e no SQL no CMD é sem GMT
+	
+	final static String gc_http 		= "http"; 
 	
 	//---------ATRIBUTOS---------//
 	
@@ -29,7 +35,7 @@ public class cl_main {
 	
 	private static int gv_submit = 0; //1=Cluster 
 	
-	private static int gv_batch = 6;
+	private static int gv_batch = 7;
 	
 	private Dataset<Row> gt_data;
 	
@@ -131,20 +137,32 @@ public class cl_main {
 			
 			Dataset<Row> lt_res;
 			
-			cl_kmeans lo_kmeans = new cl_kmeans();
+			cl_kmeans lo_kmeans = new cl_kmeans(gc_stamp, gv_stamp);
 			
 			go_select.m_conf_phoenix(gc_table, "K-means", gv_session);
 			
-			gt_data = go_select.m_seleciona(gc_stamp);
+			gt_data = go_select.m_seleciona_conn(gc_stamp);
 			
-			lt_res = lo_kmeans.m_normaliza_dados(gt_data);
+			lo_kmeans.m_start_kmeans_ddos(gv_session, gt_data, gc_http );
 			
-			//lo_kmeans.m_kmeans(gt_data, gv_session);
+			//lt_res = lo_kmeans.m_normaliza_analise_ddos(gt_data, "http");					
 			
 			//lo_kmeans.m_ddos_kmeans(lt_res, gv_session);
 			
 			break;
-
+			
+		case 7: //Get resultados
+			
+			String lv_stamp = "2018-12-09 00:01:00.000";
+			
+			go_select.m_conf_phoenix(gc_kmeans_ddos, "Conn_ORIG_RESP", gv_session);
+			
+//			/go_select.m_select_LogTotais(lv_stamp, cl_processa.lc_service);
+			
+			go_select.m_select_LogKmeansDdos(lv_stamp, gc_http);
+			
+			break;
+			
 		}		
 				
 	}

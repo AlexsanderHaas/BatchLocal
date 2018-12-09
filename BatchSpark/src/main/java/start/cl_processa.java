@@ -14,51 +14,76 @@ public class cl_processa {
 
 //---------CONSTANTES---------//
 		
-	final static String gc_conn_ip = "CONN_IP1";	
+	final String gc_conn_ip = "CONN_IP1";	
 	
-	final static String gc_totais = "LOG_TOTAIS";
+	final String gc_totais = cl_main.gc_totais;
 	
-	final static String gc_conn = "CONN";
-	final static String gc_dns  = "DNS";
-	final static String gc_http = "HTTP";		
+	final String gc_conn = "CONN";
+	final String gc_dns  = "DNS";
+	final String gc_http = "HTTP";		
 	
 //------------------Colunas------------------------//
 	
-	final static String gc_proto 		= "PROTO";
-	final static String gc_service		= "SERVICE";
-	final static String gc_orig_h		= "ID_ORIG_H";
-	final static String gc_orig_p		= "ID_ORIG_P";
-	final static String gc_resp_h		= "ID_RESP_H";
-	final static String gc_resp_p		= "ID_RESP_P";
+	final String gc_proto 		 = "PROTO";
+	final String gc_service		 = "SERVICE";
+	final String gc_orig_h		 = "ID_ORIG_H";
+	final String gc_orig_p		 = "ID_ORIG_P";
+	final String gc_resp_h		 = "ID_RESP_H";
+	final String gc_resp_p		 = "ID_RESP_P";
 	
-	final static String gc_duration     = "DURATION";
-	final static String gc_orig_pkts    = "ORIG_PKTS";
-	final static String gc_orig_bytes   = "ORIG_BYTES";
-	final static String gc_resp_pkts	= "RESP_PKTS";
-	final static String gc_resp_bytes   = "RESP_BYTES";	
+	final String gc_duration     = "DURATION";
+	final String gc_o_bytes      = "ORIG_IP_BYTES";
+	final String gc_r_bytes      = "RESP_IP_BYTES";
+	final String gc_orig_pkts    = "ORIG_PKTS";
+	final String gc_orig_bytes   = "ORIG_BYTES";
+	final String gc_resp_pkts	 = "RESP_PKTS";
+	final String gc_resp_bytes   = "RESP_BYTES";	
 	
-	final static String lc_duration     = "SUM(DURATION) AS DURATION, ";
-	final static String lc_orig_pkts    = "SUM(ORIG_PKTS) AS ORIG_PKTS, ";
-	final static String lc_orig_bytes   = "SUM(ORIG_BYTES) AS ORIG_BYTES, ";
-	final static String lc_resp_pkts	= "SUM(RESP_PKTS) AS RESP_PKTS, ";
-	final static String lc_resp_bytes   = "SUM(RESP_BYTES) AS RESP_BYTES ";	
+	final String lc_duration     = "SUM(DURATION) AS DURATION, ";
+	final String lc_o_bytes      = "sum(ORIG_IP_BYTES) AS ORIG_IP_BYTES, "; 
+	final String lc_r_bytes      = "sum(RESP_IP_BYTES) AS RESP_IP_BYTES, "; 
+	final String lc_orig_pkts    = "SUM(ORIG_PKTS) AS ORIG_PKTS, ";
+	final String lc_orig_bytes   = "SUM(ORIG_BYTES) AS ORIG_BYTES, ";
+	final String lc_resp_pkts	 = "SUM(RESP_PKTS) AS RESP_PKTS, ";
+	final String lc_resp_bytes   = "SUM(RESP_BYTES) AS RESP_BYTES ";	
 	
-	final static String lv_sum = lc_duration   + 
-						         lc_orig_pkts  + 
-						         lc_orig_bytes +
-						         lc_resp_pkts  +
-						         lc_resp_bytes;	
+	final String lv_sum = lc_duration   +
+			              lc_o_bytes    + 
+			              lc_r_bytes    +
+						  lc_orig_pkts  + 
+						  lc_orig_bytes +
+						  lc_resp_pkts  +
+						  lc_resp_bytes;	
 	
-//---------ATRIBUTOS---------//
+	//---------TIPOS DE TOTAIS---------//
+	
+	final static String lc_proto 		     = "PROTO";
+	final static String lc_service 	    	 = "SERVICE";
+	final static String lc_orig_h	 	     = "ORIG_H";
+	final static String lc_orig_p	 	     = "ORIG_P";
+	final static String lc_orig_h_p	     	 = "ORIG_H_P";
+	final static String lc_orig_h_proto	 	 = "ORIG_H_PROTO";
+	final static String lc_orig_h_service	 = "ORIG_H_SERVICE";
+	final static String lc_orig_h_p_resp_h   = "ORIG_H_P_RESP_H";
+	      
+	final static String lc_resp_h	 	     = "RESP_H";
+	final static String lc_resp_p	 	     = "RESP_P";
+	final static String lc_resp_h_p	     	 = "RESP_H_P";
+	final static String lc_resp_h_proto	 	 = "RESP_H_PROTO";
+	final static String lc_resp_h_service	 = "RESP_H_SERVICE";
+	final static String lc_resp_h_p_orig_h 	 = "RESP_H_P_ORIG_H";
+	      
+	final static String lc_orig_h_resp_h 	 = "ORIG_H_RESP_H";
+	final static String lc_orig_h_p_resp_h_p = "ORIG_H_P_RESP_H_P";
+	
+	//---------ATRIBUTOS---------//
 	
 	private cl_seleciona go_select;
 	
 	private long gv_stamp_filtro; //Filtro da seleção de dados
 	
 	private long gv_stamp; //Stamp do inicio da execução
-	
-	private Dataset<Row> gt_data;
-	
+		
 	public cl_processa(String lv_filtro, long lv_stamp){
 		
 		java.sql.Timestamp lv_ts = java.sql.Timestamp.valueOf( lv_filtro ) ;
@@ -290,31 +315,10 @@ public class cl_processa {
 	
 	public void m_start_analyzes(Dataset<Row> lt_data) {
 		
-		final String lc_proto 		     = "PROTO";
-		final String lc_service 	     = "SERVICE";
-		final String lc_orig_h	 	     = "ORIG_H";
-		final String lc_orig_p	 	     = "ORIG_P";
-		final String lc_orig_h_p	     = "ORIG_H_P";
-		final String lc_orig_h_proto	 = "ORIG_H_PROTO";
-		final String lc_orig_h_service	 = "ORIG_H_SERVICE";
-		final String lc_orig_h_p_resp_h  = "ORIG_H_P_RESP_H";
-		
-		final String lc_resp_h	 	     = "RESP_H";
-		final String lc_resp_p	 	     = "RESP_P";
-		final String lc_resp_h_p	     = "RESP_H_P";
-		final String lc_resp_h_proto	 = "RESP_H_PROTO";
-		final String lc_resp_h_service	 = "RESP_H_SERVICE";
-		final String lc_resp_h_p_orig_h  = "RESP_H_P_ORIG_H";
-		
-		final String lc_orig_h_resp_h 	  = "ORIG_H_RESP_H";
-		final String lc_orig_h_p_resp_h_p = "ORIG_H_P_RESP_H_P";
-		
 		String lc_v = ", ";
 		
 		String lv_group;
-		
-		//gt_data = lt_data;
-		
+				
 		lt_data.createOrReplaceTempView("LOG"); //cria uma tabela temporaria, para acessar via SQL
 				
 //-----------Conexões por PROTOCOLO--------------------------------------//				
@@ -399,11 +403,7 @@ public class cl_processa {
 		
 		Dataset<Row> lt_res;
 		
-		long lv_i = System.currentTimeMillis();  
-				
-		lv_i = System.currentTimeMillis();  			
-		
-		//lt_data.createOrReplaceTempView("LOG"); //cria uma tabela temporaria, para acessar via SQL				
+		cl_util.m_time_start();							
 			
 		//System.out.println("SQL: "+lv_sql);
 				
@@ -419,9 +419,7 @@ public class cl_processa {
 		
 		cl_util.m_save_log(lt_res, gc_totais);
 		
-		long lv_f = ( System.currentTimeMillis() - lv_i ) / 1000;
-		
-		System.out.println(lv_tipo+") A função foi executada em:\t" + lv_f +" Segundos");
+		cl_util.m_time_end();	
 			
 	}
 	

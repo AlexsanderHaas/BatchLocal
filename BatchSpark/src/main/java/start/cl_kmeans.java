@@ -18,7 +18,7 @@ public class cl_kmeans {
 	
 	final String gc_kmeans_ddos = cl_main.gc_kmeans_ddos;
 	
-	final  String gc_format = "dd.MM.yyyy HH:mm";	
+	final String gc_format = "dd.MM.yyyy HH:mm";	
 	
 	//------------------Colunas------------------------//
 	
@@ -79,7 +79,7 @@ public class cl_kmeans {
 		
 		lt_res = m_normaliza_analise_ddos(lt_data);
 		
-		m_ddos_kmeans(lt_res, lv_session);
+		m_ddos_kmeans(lt_res, lv_session, cl_main.gc_kmeans_ddos);
 		
 	}
 
@@ -105,7 +105,7 @@ public class cl_kmeans {
 				                 gc_orig_bytes,
 				                 gc_resp_pkts,	
 				                 gc_resp_bytes )					   
-					   .filter(col(gc_service).equalTo(gv_tipo))
+					   .filter(col(gc_service).equalTo(gv_tipo))					   
 					   .withColumn(gc_ts, date_format(col(gc_ts), gc_format))					   
 					   //.withColumn(gc_ts, date_format(col(gc_ts), "dd.MM.yyyy HH")) Salvando por minuto na tabela depois consigo filtrar por HORA
 					   .groupBy( col(gc_orig_h),							     
@@ -140,7 +140,7 @@ public class cl_kmeans {
 			           .withColumn(gc_rowid, functions.monotonically_increasing_id())
 			           .withColumn(gc_ts, to_timestamp(col(gc_ts),gc_format)); //para salvar no banco coloca em timestamp novamente
 		
-		cl_util.m_show_dataset(lt_res, "1) Normaliza Kmeans");									
+		//cl_util.m_show_dataset(lt_res, "1) Normaliza Kmeans");									
 		
 		//m_IpOrig_ForTime(lt_res);
 		
@@ -151,26 +151,107 @@ public class cl_kmeans {
 		return lt_res;
 		
 	}
+		
+	public void m_start_kmeans_ScanPort(SparkSession lv_session, Dataset<Row> lt_data, String lv_proto) {
+		
+		Dataset<Row> lt_res;
+		
+		gv_tipo = lv_proto; //Fazer filtro por PROTOCOLO TAMBÈM?
+		
+		lt_res = m_normaliza_analise_ScanPort(lt_data);
+		
+		m_ddos_kmeans(lt_res, lv_session, cl_main.gc_kmeans_scan);
+		
+	}
+	
+	public Dataset<Row> m_normaliza_analise_ScanPort(Dataset<Row> lt_data){
+		
+		Dataset<Row> lt_res;
+		
+		cl_util.m_time_start();				
+		
+		//Query que agrupa todas as portas de Origem Por IP e Minuto
+		
+		lt_res = lt_data.select( gc_orig_h  ,
+								 gc_orig_p  ,
+								 gc_resp_h  ,
+				                 gc_resp_p  ,
+				                 gc_proto   ,
+				                 gc_service ,
+				                 gc_ts,
+				                 gc_ts_code,
+				                 gc_duration,
+				                 gc_o_bytes,
+				                 gc_r_bytes,
+				                 gc_orig_pkts, 
+				                 gc_orig_bytes,
+				                 gc_resp_pkts,	
+				                 gc_resp_bytes )					   
+					   .filter(col(gc_proto).equalTo(gv_tipo))    					   
+					   .withColumn(gc_ts, date_format(col(gc_ts), gc_format))				   					  
+					   .groupBy( col(gc_orig_h),
+							     col(gc_orig_p),
+							     col(gc_resp_h), 							      
+							     col(gc_proto),  
+		                         col(gc_ts))
+					    .agg(sum(gc_duration),
+							sum(gc_orig_pkts), 
+							sum(gc_o_bytes),
+							sum(gc_orig_bytes),
+							sum(gc_resp_pkts),	
+							sum(gc_r_bytes),
+							sum(gc_resp_bytes),
+							count("*"))
+					   .withColumnRenamed("count(1)", gc_count)
+					   .withColumnRenamed(lc_duration, gc_duration)
+					   .withColumnRenamed(lc_orig_pkts, gc_orig_pkts)
+					   .withColumnRenamed(lc_o_bytes, gc_o_bytes)
+					   .withColumnRenamed(lc_orig_bytes, gc_orig_bytes) //Podem ser imprecisos de acordo com o BRO
+					   .withColumnRenamed(lc_resp_pkts, gc_resp_pkts)
+					   .withColumnRenamed(lc_r_bytes, gc_r_bytes)
+					   .withColumnRenamed(lc_resp_bytes, gc_resp_bytes); //Podem ser imprecisos de acordo com o BRO				   
+					   		
+		lt_res = lt_res.sort(gc_orig_h,
+							 gc_ts,
+							 gc_count);
+		
+		lt_res = lt_res.withColumn(gc_ts_filtro, functions.lit(gv_stamp_filtro))						   
+			           .withColumn(gc_ts_code, functions.lit(gv_stamp))
+			           .withColumn(gc_rowid, functions.monotonically_increasing_id())
+			           .withColumn(gc_ts, to_timestamp(col(gc_ts),gc_format)); //para salvar no banco coloca em timestamp novamente
+		
+		//cl_util.m_show_dataset(lt_res, "1) Normaliza Kmeans");									
+		
+		//m_IpOrig_ForTime(lt_res);
+		
+		//cl_util.m_save_csv(lt_res, "SCAN_PORT");
+		
+		cl_util.m_time_end();
+		
+		return lt_res;
+		
+	}
 	
 	public void m_IpOrig_ForTime(Dataset<Row> lt_res) { //DDoS Attack
-				
+		
 		Dataset<Row> lt_count;
 		
 		lt_count = lt_res.groupBy(gc_ts)
-	                     .pivot(gc_orig_h)
-						 //.pivot(gc_resp_h)
+	                     .pivot(gc_orig_h)						 
 	                     .sum(gc_count)
 	                     .sort(col(gc_ts));
 	                     
 		cl_util.m_show_dataset(lt_count, "1) IPS");
 
-		cl_util.m_save_csv(lt_count, "GRF_ORIGHP");			
+		cl_util.m_save_csv(lt_count, "GRF_DDOS_IP");			
 		
 	}
 	
-	public void m_ddos_kmeans(Dataset<Row> lt_data, SparkSession lv_session) {
+	public void m_ddos_kmeans(Dataset<Row> lt_data, SparkSession lv_session, String lv_table) {
 		
 		final String lc_feat = "features";
+		
+		final String lc_centroid = "CENTROID";
 		
 		VectorAssembler lv_assembler = new VectorAssembler();
 		
@@ -220,101 +301,72 @@ public class cl_kmeans {
 	    
 	    Dataset<Row> lt_res = model.transform(lv_vector).sort(col("prediction").desc());	    	    
 	    
-	    lt_res = lt_res.withColumn("CENTROID", functions.lit(lv_centroid))
+	    lt_res = lt_res.withColumn(lc_centroid, functions.lit(lv_centroid))
 	    			   .drop(lc_feat);
 	    
-	    //cl_util.m_save_csv(lt_res.drop(col("CENTROID")), "DDoS-SCAN_PORT");
+	    //cl_util.m_save_csv(lt_res.drop(col(lc_centroid)), lv_table);
 	    
 	    //cl_util.m_save_json(lt_res, "DDoS-Kmeansdrop");
 	    
-	    cl_util.m_show_dataset(lt_res, "Kmeans DDdos");
+	    //cl_util.m_show_dataset(lt_res, gv_tipo+lv_table);
 	    
-	    //cl_util.m_save_log(lt_res, gc_kmeans_ddos);    
+	    cl_util.m_save_log(lt_res, lv_table);    
 	    	    
 	    cl_util.m_time_end();
 	    	    	    
 	}
 	
-	public void m_start_kmeans_ScanPort(SparkSession lv_session, Dataset<Row> lt_data, String lv_service) {
+	public void m_export_kmeans_ddos(Dataset<Row> lt_data) {
+						
+		m_export_process(lt_data, gc_service, cl_main.gc_http);
 		
-		Dataset<Row> lt_res;
+		m_export_process(lt_data, gc_service, cl_main.gc_ssl);
 		
-		gv_tipo = lv_service; //Fazer filtro por PROTOCOLO TAMBÈM?
-		
-		lt_res = m_normaliza_analise_ScanPort(lt_data);
-		
-		m_ddos_kmeans(lt_res, lv_session);
+		m_export_process(lt_data, gc_service, cl_main.gc_ssh);
 		
 	}
 	
-	public Dataset<Row> m_normaliza_analise_ScanPort(Dataset<Row> lt_data){
+	public void m_export_kmeans_ScanPort(Dataset<Row> lt_data) {
 		
+		m_export_process(lt_data, gc_proto, cl_main.gc_tcp);
+		
+		m_export_process(lt_data, gc_proto, cl_main.gc_udp);
+				
+	}
+	
+	public void m_export_process(Dataset<Row> lt_data, String lv_col, String lv_tipo) {
+				
 		Dataset<Row> lt_res;
 		
-		cl_util.m_time_start();				
+		String lv_dd = "DDoS_";
 		
-		//Query que agrupa todas as portas de Origem Por IP e Minuto
+		String lc_format = "dd.MM.yyyy HH";	
 		
-		lt_res = lt_data.select( gc_orig_h  ,
-								 gc_orig_p  ,
-								 gc_resp_h  ,
-				                 gc_resp_p  ,
-				                 gc_proto   ,
-				                 gc_service ,
-				                 gc_ts,
-				                 gc_ts_code,
-				                 gc_duration,
-				                 gc_o_bytes,
-				                 gc_r_bytes,
-				                 gc_orig_pkts, 
-				                 gc_orig_bytes,
-				                 gc_resp_pkts,	
-				                 gc_resp_bytes )					   
-					   .filter(col(gc_proto).equalTo("tcp"))    					   
-					   .withColumn(gc_ts, date_format(col(gc_ts), gc_format))				   					  
-					   .groupBy( col(gc_orig_h),
-							     col(gc_orig_p),
-							     col(gc_resp_h), 							      
-							     col(gc_proto),  
-		                         col(gc_ts))
-					    .agg(sum(gc_duration),
-							sum(gc_orig_pkts), 
-							sum(gc_o_bytes),
-							sum(gc_orig_bytes),
-							sum(gc_resp_pkts),	
-							sum(gc_r_bytes),
-							sum(gc_resp_bytes),
-							count("*"))
-					   .withColumnRenamed("count(1)", gc_count)
-					   .withColumnRenamed(lc_duration, gc_duration)
-					   .withColumnRenamed(lc_orig_pkts, gc_orig_pkts)
-					   .withColumnRenamed(lc_o_bytes, gc_o_bytes)
-					   .withColumnRenamed(lc_orig_bytes, gc_orig_bytes) //Podem ser imprecisos de acordo com o BRO
-					   .withColumnRenamed(lc_resp_pkts, gc_resp_pkts)
-					   .withColumnRenamed(lc_r_bytes, gc_r_bytes)
-					   .withColumnRenamed(lc_resp_bytes, gc_resp_bytes); //Podem ser imprecisos de acordo com o BRO				   
-					   		
-		lt_res = lt_res.sort(gc_orig_h,
-							 gc_ts,
-							 gc_count);
+		lt_res = lt_data.filter(col(lv_col).equalTo(lv_tipo))
+						.sort(gc_ts);
 		
-		lt_res = lt_res.withColumn(gc_ts_filtro, functions.lit(gv_stamp_filtro))						   
-			           .withColumn(gc_ts_code, functions.lit(gv_stamp))
-			           .withColumn(gc_rowid, functions.monotonically_increasing_id())
-			           .withColumn(gc_ts, to_timestamp(col(gc_ts),gc_format)); //para salvar no banco coloca em timestamp novamente
+		cl_util.m_save_json(lt_res, lv_dd+lv_tipo);
 		
-		cl_util.m_show_dataset(lt_res, "1) Normaliza Kmeans");									
+		Dataset<Row> lt_count;
 		
-		m_IpOrig_ForTime(lt_res);
+		lt_count = lt_res.groupBy(gc_ts)
+	                     .pivot(gc_orig_h)						 
+	                     .sum(gc_count)
+	                     .sort(col(gc_ts));
 		
-		//cl_util.m_save_csv(lt_res, "SCAN_PORT");
+		cl_util.m_save_csv(lt_count, lv_dd+lv_tipo+"_PIVOT_M");
 		
-		cl_util.m_time_end();
+		lt_count = lt_res.withColumn(gc_ts, date_format(col(gc_ts), lc_format))
+				         .groupBy(gc_ts)
+				         .pivot(gc_orig_h)						 
+                         .sum(gc_count)
+                         .sort(col(gc_ts));
+
+		cl_util.m_save_csv(lt_count, lv_dd+lv_tipo+"_PIVOT_H");	
 		
-		return lt_res;
 		
 	}
-			
+	
 	public void m_kmeans(Dataset<Row> lt_data, SparkSession lv_session) {
 		
 		Dataset<Row> lt_sum;

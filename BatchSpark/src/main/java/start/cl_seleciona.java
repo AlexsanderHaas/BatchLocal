@@ -28,7 +28,7 @@ public class cl_seleciona {
 		                        
 	private SparkSession gv_session;
 				
-	public void m_conf_phoenix(String lv_table, String lv_app, SparkSession lv_session){
+	public void m_conf_phoenix(String lv_table, SparkSession lv_session){
 		
 		gv_session = lv_session;
 		
@@ -233,7 +233,7 @@ public class cl_seleciona {
 		
 	}
 	
-	public Dataset<Row> m_select_LogTotais(String lv_stamp, String lv_tipo){
+	public Dataset<Row> m_select_LogTotais(String lv_stamp){
 		
 		Dataset<Row> lt_data;	
 		
@@ -243,16 +243,16 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      			      
-			      .filter(col("TIPO").equalTo(lv_tipo))
+			      //.filter(col("TIPO").equalTo(lv_tipo))
 				  .filter(col("TS_CODE").gt(lv_stamp));
 			     		
-		cl_util.m_show_dataset(lt_data, lv_tipo+":LOG totais");
+		cl_util.m_show_dataset(lt_data, ":LOG totais");
 		
 		return lt_data;
 		
 	}
 	
-	public Dataset<Row> m_select_LogKmeansDdos(String lv_stamp, String lv_tipo){
+	public Dataset<Row> m_select_LogKmeans(String lv_stamp){
 		
 		Dataset<Row> lt_data;	
 		
@@ -262,10 +262,10 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      			      
-			      .filter(col(cl_kmeans.gc_service).equalTo(lv_tipo))
+			      //.filter(col(cl_kmeans.gc_service).equalTo(lv_tipo))
 				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp));
 			     		
-		cl_util.m_show_dataset(lt_data, lv_tipo+":LOG totais");
+		cl_util.m_show_dataset(lt_data, ":LOG totais");
 		
 		return lt_data;
 		

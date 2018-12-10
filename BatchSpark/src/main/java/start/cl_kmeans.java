@@ -223,7 +223,7 @@ public class cl_kmeans {
 	    lt_res = lt_res.withColumn("CENTROID", functions.lit(lv_centroid))
 	    			   .drop(lc_feat);
 	    
-	    //cl_util.m_save_csv(lt_res.drop(col("features")), "DDoS-Kmeansdrop");
+	    //cl_util.m_save_csv(lt_res.drop(col("CENTROID")), "DDoS-SCAN_PORT");
 	    
 	    //cl_util.m_save_json(lt_res, "DDoS-Kmeansdrop");
 	    
@@ -243,7 +243,7 @@ public class cl_kmeans {
 		
 		lt_res = m_normaliza_analise_ScanPort(lt_data);
 		
-//		/m_ddos_kmeans(lt_res, lv_session);
+		m_ddos_kmeans(lt_res, lv_session);
 		
 	}
 	
@@ -270,14 +270,12 @@ public class cl_kmeans {
 				                 gc_orig_bytes,
 				                 gc_resp_pkts,	
 				                 gc_resp_bytes )					   
-					   //.filter(col(gc_service).equalTo(gv_tipo))
 					   .filter(col(gc_proto).equalTo("tcp"))    					   
 					   .withColumn(gc_ts, date_format(col(gc_ts), gc_format))				   					  
 					   .groupBy( col(gc_orig_h),
 							     col(gc_orig_p),
 							     col(gc_resp_h), 							      
 							     col(gc_proto),  
-		                         //col(gc_service), //Filtro por protocolo só agrupa por protocolo
 		                         col(gc_ts))
 					    .agg(sum(gc_duration),
 							sum(gc_orig_pkts), 
@@ -307,9 +305,9 @@ public class cl_kmeans {
 		
 		cl_util.m_show_dataset(lt_res, "1) Normaliza Kmeans");									
 		
-		//m_IpOrig_ForTime(lt_res);
+		m_IpOrig_ForTime(lt_res);
 		
-		cl_util.m_save_csv(lt_res, "ORIG_H_P_RESP3");
+		//cl_util.m_save_csv(lt_res, "SCAN_PORT");
 		
 		cl_util.m_time_end();
 		

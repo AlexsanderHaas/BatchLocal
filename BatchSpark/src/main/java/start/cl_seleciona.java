@@ -243,7 +243,6 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      			      
-			      //.filter(col("TIPO").equalTo(lv_tipo))
 				  .filter(col("TS_CODE").gt(lv_stamp));
 			     		
 		cl_util.m_show_dataset(lt_data, ":LOG totais");
@@ -262,8 +261,8 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      			      
-			      //.filter(col(cl_kmeans.gc_service).equalTo(lv_tipo))
-				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp));
+				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp))
+				  .filter(col("ID_RESP_H").equalTo("65.152.202.208")).limit(2);
 			     		
 		cl_util.m_show_dataset(lt_data, ":LOG totais");
 		

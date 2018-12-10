@@ -183,31 +183,37 @@ public class cl_main {
 			
 			cl_util.m_time_start();
 			
+			/*//Totais
+			
 			go_select.m_conf_phoenix(gc_totais, gv_session);
 			
 			lt_res = go_select.m_select_LogTotais(lv_stamp);
 			
 			go_processa.m_export_totais(lt_res);
 			
+			*/
+			
+			//Kmeans DDoS
+			
 			lo_kmeans = new cl_kmeans(gc_stamp, gv_stamp);
 			
 			lv_stamp = "2018-12-10 00:01:00.000";
-			
-			//Kmeans DDoS
 			
 			go_select.m_conf_phoenix(gc_kmeans_ddos, gv_session);
 			
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 			
-			lo_kmeans.m_export_kmeans_ddos(lt_res);
+			lo_kmeans.m_ipinfo(lt_res);//teste
+			
+			//lo_kmeans.m_export_kmeans_ddos(lt_res);
 			
 			//Kmeans Port Scan
 			
-			go_select.m_conf_phoenix(gc_kmeans_scan, gv_session);
+			/*go_select.m_conf_phoenix(gc_kmeans_scan, gv_session);
 			
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 			
-			lo_kmeans.m_export_kmeans_ScanPort(lt_res);
+			lo_kmeans.m_export_kmeans_ScanPort(lt_res);*/
 			
 			cl_util.m_time_end();
 			

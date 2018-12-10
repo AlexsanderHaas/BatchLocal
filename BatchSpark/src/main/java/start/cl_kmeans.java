@@ -10,7 +10,19 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
+
+import io.ipinfo.api.IPInfo;
+import io.ipinfo.api.errors.RateLimitedException;
+import io.ipinfo.api.model.IPResponse;
+
 import org.apache.spark.sql.Column;
+
+import org.apache.spark.sql.Encoder;
+import org.apache.spark.sql.Encoders;
+
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.api.java.function.MapFunction;
 
 public class cl_kmeans {
 	
@@ -106,8 +118,7 @@ public class cl_kmeans {
 				                 gc_resp_pkts,	
 				                 gc_resp_bytes )					   
 					   .filter(col(gc_service).equalTo(gv_tipo))					   
-					   .withColumn(gc_ts, date_format(col(gc_ts), gc_format))					   
-					   //.withColumn(gc_ts, date_format(col(gc_ts), "dd.MM.yyyy HH")) Salvando por minuto na tabela depois consigo filtrar por HORA
+					   .withColumn(gc_ts, date_format(col(gc_ts), gc_format))					   					  
 					   .groupBy( col(gc_orig_h),							     
 							     col(gc_resp_h), 
 							     col(gc_resp_p), 
@@ -365,6 +376,50 @@ public class cl_kmeans {
 		cl_util.m_save_csv(lt_count, lv_dd+lv_tipo+"_PIVOT_H");	
 		
 		
+	}
+	
+	public void m_ipinfo(Dataset<Row> lt_data) {
+		
+		final String gc_token = "dc695e943d23f0";
+		
+		Dataset<Row> lt_res;
+		
+		lt_res = lt_data.select("ID_RESP_H").distinct();//.filter(col("prediction").equalTo(1));
+		
+		Dataset<String> lv_df = lt_res.map(
+			    (MapFunction<Row,String >) row -> "Name: " + row.getString(3),Encoders.STRING()
+			    	
+				);
+		
+		//fazer select na tabela local do IP info, e separa os IPs que não encontrou local pesquisa
+		
+		Dataset<cl_IpInfo> lv_df1 = lt_res.map( row->{ 
+			
+						cl_IpInfo lo_ip = new cl_IpInfo();	
+						
+						IPInfo ipInfo = IPInfo.builder().setToken(gc_token).build();
+						
+						IPResponse response = ipInfo.lookupIP(row.getString(0));
+				            
+				        System.out.println("ALL:"+response.toString());
+						
+				        lo_ip.setHostname(response.getHostname());
+			            lo_ip.setCity(response.getCity());
+			            lo_ip.setRegion(response.getRegion());
+			            
+			            lo_ip.setContry(response.getCountryCode());
+			            
+			            lo_ip.setOrg(response.getOrg());
+			            
+			            lo_ip.setLatitude(response.getLatitude());
+			            
+			            lo_ip.setLongitude(response.getLongitude());
+						
+						return lo_ip;
+				
+				},Encoders.bean(cl_IpInfo.class));
+		
+		lv_df1.show();
 	}
 	
 	public void m_kmeans(Dataset<Row> lt_data, SparkSession lv_session) {

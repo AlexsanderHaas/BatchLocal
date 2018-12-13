@@ -52,10 +52,10 @@ public class cl_util {
 		if(lv_num > 0) {
 			
 			lt_data.write()
-				.format("org.apache.phoenix.spark")
+				.format(cl_seleciona.gc_phoenix)
 				.mode("overwrite")
 				.option("table", lt_table)
-				.option("zkUrl", gc_zkurl)
+				.option("zkUrl", cl_seleciona.gc_zkurl)
 				.option("autocommit", "true")
 				.save();
 		}		

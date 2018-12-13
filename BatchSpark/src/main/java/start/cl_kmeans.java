@@ -11,6 +11,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 
+import IpInfo.cl_IpInfo;
 import io.ipinfo.api.IPInfo;
 import io.ipinfo.api.errors.RateLimitedException;
 import io.ipinfo.api.model.IPResponse;
@@ -382,6 +383,8 @@ public class cl_kmeans {
 		
 		final String gc_token = "dc695e943d23f0";
 		
+		final String lc_table = "IP_INFO";
+		
 		Dataset<Row> lt_res;
 		
 		lt_res = lt_data.select("ID_RESP_H").distinct();//.filter(col("prediction").equalTo(1));
@@ -391,35 +394,75 @@ public class cl_kmeans {
 			    	
 				);
 		
-		//fazer select na tabela local do IP info, e separa os IPs que não encontrou local pesquisa
+		//fazer select na tabela local do IP info, e separa os IPs que não encontrou local pesquisa			
+		
+		//fazer um limtador selecionar no maximo 1000 linhas para a função abaixo
+		
+		//select distinct
 		
 		Dataset<cl_IpInfo> lv_df1 = lt_res.map( row->{ 
 			
 						cl_IpInfo lo_ip = new cl_IpInfo();	
-						
+												
 						IPInfo ipInfo = IPInfo.builder().setToken(gc_token).build();
 						
 						IPResponse response = ipInfo.lookupIP(row.getString(0));
 				            
 				        System.out.println("ALL:"+response.toString());
 						
+				        lo_ip.setIp(row.getString(0));
+				        
 				        lo_ip.setHostname(response.getHostname());
-			            lo_ip.setCity(response.getCity());
-			            lo_ip.setRegion(response.getRegion());
 			            
-			            lo_ip.setContry(response.getCountryCode());
+				        lo_ip.setCity(response.getCity());
+			            
+				        lo_ip.setRegion(response.getRegion());
+			            
+			            lo_ip.setCountry(response.getCountryCode());
 			            
 			            lo_ip.setOrg(response.getOrg());
 			            
-			            lo_ip.setLatitude(response.getLatitude());
+			            lo_ip.setLatitude(Double.parseDouble(response.getLatitude()));
 			            
-			            lo_ip.setLongitude(response.getLongitude());
-						
+			            lo_ip.setLongitude(Double.parseDouble(response.getLongitude()));
+									            			            
 						return lo_ip;
 				
 				},Encoders.bean(cl_IpInfo.class));
 		
+		String lv_col[] = new String[8];
+		
+		
+		
+		lv_col[0] = "hostname";
+		lv_col[1] = "city";
+		lv_col[2] = "country";		
+		lv_col[3] = "region";  		
+		lv_col[4] = "org";     
+		lv_col[5] = "latitude";
+		lv_col[6] = "longitude";
+		lv_col[7] = "ip";
+		
+		lt_res = lv_df1.toDF(lv_col);
+		lt_res.printSchema();
+		
+		lt_res.show();
+		
+		lv_df1.printSchema();
+		
 		lv_df1.show();
+		
+		lv_df1.write()
+		.format("org.apache.phoenix.spark")
+		.mode("overwrite")
+		.option("table", lc_table)
+		.option("zkUrl", cl_seleciona.gc_zkurl)
+		.option("autocommit", "true")
+		.save();
+		
+		//cl_util.m_save_log(lt_res, lc_table);
+		
+		//lv_df1.show();
 	}
 	
 	public void m_kmeans(Dataset<Row> lt_data, SparkSession lv_session) {

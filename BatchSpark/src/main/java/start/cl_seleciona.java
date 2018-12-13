@@ -14,9 +14,9 @@ public class cl_seleciona {
 
 	//---------CONSTANTES---------//
 	
-	final static String gc_zkurl = "localhost:2181";
+	final public static String gc_zkurl = "localhost:2181";
 	
-	final static String gc_phoenix = "org.apache.phoenix.spark";
+	final public static String gc_phoenix = "org.apache.phoenix.spark";
 	
 	final static String gc_conn = "CONN";
 	final static String gc_dns  = "DNS";

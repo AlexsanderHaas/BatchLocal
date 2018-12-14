@@ -227,7 +227,7 @@ public class cl_seleciona {
 				  .filter(col("TS_CODE").gt(lv_stamp))
 				  .filter(col("COUNT").isNull());
 			     		
-		System.out.println("Conexões Resultado: \t"+lt_data.count() + "\n\n");
+		//System.out.println("Conexões Resultado: \t"+lt_data.count() + "\n\n");
 		
 		return lt_data;
 		
@@ -245,7 +245,7 @@ public class cl_seleciona {
 			      .load()			      			      
 				  .filter(col("TS_CODE").gt(lv_stamp));
 			     		
-		cl_util.m_show_dataset(lt_data, ":LOG totais");
+		//cl_util.m_show_dataset(lt_data, ":LOG totais");
 		
 		return lt_data;
 		
@@ -264,10 +264,24 @@ public class cl_seleciona {
 				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp))
 				  .filter(col("ID_RESP_H").equalTo("65.152.202.208")).limit(2);
 			     		
-		cl_util.m_show_dataset(lt_data, ":LOG totais");
+		//cl_util.m_show_dataset(lt_data, ":LOG totais");
 		
 		return lt_data;
 		
+	}
+	
+	public Dataset<Row> m_select_IpInfo(Dataset<Row> lt_data, String lv_field) {
+		
+		Dataset<Row> lt_res = gv_session
+			                  .sqlContext()
+			                  .read()
+			                  .format(gc_phoenix)
+			                  .options(gv_phoenix)							   
+			                  .load()
+			                  .join(lt_data,col(lv_field).equalTo("IP"),"left_anti");
+			                  //.filter(col("IP").equalTo(lt_data.col(lv_field)));
+		
+		return lt_res;
 	}
 	
 }

@@ -11,6 +11,9 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
+import IpInfo.cl_IpInfo;
+import IpInfo.cl_pesquisa_ip;
+
 public class cl_main {
 	
 	//---------CONSTANTES---------//
@@ -39,7 +42,7 @@ public class cl_main {
 	
 	//---------ATRIBUTOS---------//
 	
-	private long gv_stamp;
+	public static long gv_stamp;
 	
 	private Date gv_time = new Date();
 	
@@ -65,7 +68,9 @@ public class cl_main {
 	
 	private cl_get_results go_results;
 	
-	private cl_util go_util;
+	private cl_pesquisa_ip go_ip;
+	
+	//---------METODOS---------//
 	
 	public static void main(String[] args) throws AnalysisException {
 		
@@ -203,7 +208,11 @@ public class cl_main {
 			
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 			
-			lo_kmeans.m_ipinfo(lt_res);//teste
+			go_ip = new cl_pesquisa_ip(gv_session);
+			
+			go_ip.m_processa_ip(lt_res, "ID_RESP_H");
+			
+			//lo_kmeans.m_ipinfo(lt_res);//teste
 			
 			//lo_kmeans.m_export_kmeans_ddos(lt_res);
 			

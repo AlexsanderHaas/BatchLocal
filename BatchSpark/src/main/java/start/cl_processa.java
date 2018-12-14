@@ -85,6 +85,8 @@ public class cl_processa {
 	private long gv_stamp_filtro; //Filtro da seleção de dados
 	
 	private long gv_stamp; //Stamp do inicio da execução
+	
+	//---------METODOS---------//
 		
 	public cl_processa(String lv_filtro, long lv_stamp){
 		

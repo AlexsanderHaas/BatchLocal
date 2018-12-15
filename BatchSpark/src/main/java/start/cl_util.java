@@ -13,11 +13,15 @@ public class cl_util {
 	
 	public static void m_show_dataset(Dataset<Row> lt_data, String lv_desc) {
 		
-		System.out.println("\n" + lv_desc + "\t" + lt_data.count());
-		
+		try {
+			System.out.println("\n" + lv_desc + "\t" + lt_data.count());
+		} catch (Exception e) {
+			System.out.println("\nClasse CL_UTIL SHOW DATASET COUNT-Erro:" + lv_desc + "\t" + e);
+		}
+				
 		lt_data.printSchema();
 		
-		//lt_data.show(5);
+		lt_data.show(5);
 						
 	}
 	

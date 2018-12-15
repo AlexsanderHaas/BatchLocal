@@ -212,6 +212,8 @@ public class cl_main {
 			
 			go_ip.m_processa_ip(lt_res, "ID_RESP_H");
 			
+			//Após salvar os resultados em CSV chamar o  metodo para salvar na tabela os IP?ou ja salva após a consulta?
+			
 			//lo_kmeans.m_ipinfo(lt_res);//teste
 			
 			//lo_kmeans.m_export_kmeans_ddos(lt_res);

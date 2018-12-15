@@ -262,7 +262,7 @@ public class cl_seleciona {
 			      .options(gv_phoenix)							   
 			      .load()			      			      
 				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp))
-				  .filter(col("ID_RESP_H").equalTo("13.107.4.50")).limit(2);
+				  .filter(col("ID_RESP_H").equalTo("23.111.11.211")).limit(2);
 			     		
 		//cl_util.m_show_dataset(lt_data, ":LOG totais");
 		

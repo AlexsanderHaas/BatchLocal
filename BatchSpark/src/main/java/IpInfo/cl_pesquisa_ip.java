@@ -39,6 +39,8 @@ public class cl_pesquisa_ip {
 	
 	private String gv_field;
 	
+	private Dataset<Row> gt_web;
+	
 	//---------METODOS---------//
 	
 	public cl_pesquisa_ip(SparkSession lv_session, long lv_stamp) {
@@ -59,7 +61,7 @@ public class cl_pesquisa_ip {
 		
 		Dataset<Row> lt_web;
 		
-		Dataset<Row> lt_all;
+		Dataset<Row> lt_all = null;
 		
 		gv_field = lv_field;
 		
@@ -67,13 +69,7 @@ public class cl_pesquisa_ip {
 		
 		lt_ips = lt_data.select(lv_field).distinct();
 		
-		//cl_util.m_show_dataset(lt_ips, "IPS");
-				
-		//fazer select na tabela local do IP info, e separa os IPs que não encontrou local pesquisa			
-		
-		//fazer um limtador selecionar no maximo 1000 linhas para a função abaixo
-		
-		//select distinct
+		//fazer um limtador selecionar no maximo 1000 linhas para a função abaixo CONTAR QUANTAS CONSULTAS FORAM FEITAS NO DIA
 				
 		go_select.m_conf_phoenix(gc_table, gv_session);
 		
@@ -111,32 +107,40 @@ public class cl_pesquisa_ip {
 			
 			lt_web = m_search_WebService(lt_ips_nf.limit(1000)); //Máximo 1000 consultas no dia
 			
-			cl_util.m_show_dataset(lt_ips_hb, "TABLE");
+			//cl_util.m_show_dataset(lt_ips_hb, "TABLE");
 			
 			cl_util.m_show_dataset(lt_web, "WEB");			
 			
 			//Não precisa do UNION após inserir na tabela ele atualiza a TB. Salvar apenas no final do processo entao
-			lt_all = lt_ips_hb;///lt_ips_hb.union(lt_web); // A ordem das colunas de LT_WEB tem de ser igual a LT_IPS_HB
+			//lt_all = lt_ips_hb.union(lt_web); // A ordem das colunas de LT_WEB tem de ser igual a LT_IPS_HB
 			
-			cl_util.m_show_dataset(lt_all, "UNION");
+			//lt_all = lt_ips_hb;
 			
-			lt_data = m_join_IpInfo(lt_data, lt_all);
+			try {
+				lv_nf = lt_ips_hb.count();
+
+				if(lv_nf <= 0) {
+					return lt_data;
+				}
+
+			} catch (Exception e) { //Se não encontrar nenhum IPretorna os mesmos dados
+				
+				return lt_data;
+			}
 			
-			/*lt_all = lt_all.withColumn(gc_ts, functions.lit(gv_stamp));
+			cl_util.m_show_dataset(lt_ips_hb, "UNION");
 			
-			cl_util.m_save_log(lt_all, gc_table);
-			
-			cl_util.m_show_dataset(lt_ips_hb, "Após saveTABLE");*/
+			lt_all = m_join_IpInfo(lt_data, lt_ips_hb);		
 			
 		}else {
 		
-			lt_data = m_join_IpInfo(lt_data, lt_ips_hb);
+			lt_all = m_join_IpInfo(lt_data, lt_ips_hb);
 			
-		}
+		}		
 				
-		cl_util.m_show_dataset(lt_data, "FINAL");
-	
-		return lt_data;
+		cl_util.m_show_dataset(lt_all, "FINAL");
+			
+		return lt_all;
 		
 	}
 	
@@ -182,11 +186,17 @@ public class cl_pesquisa_ip {
 		Dataset<cl_IpInfo> lt_IpInfo = lt_ip.map( row->{ 
 			
 			cl_IpInfo lo_ip = new cl_IpInfo();	
-								
+			
+			IPResponse response = null;
+			
 			IPInfo ipInfo = IPInfo.builder().setToken(lc_token).build();
-									
-			IPResponse response = ipInfo.lookupIP(row.getString(0));
-	            
+			
+			try {
+				response = ipInfo.lookupIP(row.getString(0));
+			} catch (Exception e) {
+				System.out.println("Erro Web Service:"+e);
+			}					
+			   
 	        //System.out.println("ALL:"+response.toString());
 			
 	        lo_ip.setIp(row.getString(0));
@@ -208,12 +218,16 @@ public class cl_pesquisa_ip {
 			return lo_ip;
 	
 		},Encoders.bean(cl_IpInfo.class));
+				
+		lt_IpInfo.show();
 		
 		lt_res = lt_IpInfo.toDF();
 		
+		gt_web = lt_res;
+		
 		lt_res = lt_res.withColumn(gc_ts, functions.lit(gv_stamp));
 		
-		cl_util.m_save_log(lt_res, gc_table);
+		cl_util.m_save_log(gt_web, gc_table);
 		
 		lt_res = lt_res.select("ip"			,          
 						       "hostname"   , 
@@ -225,6 +239,14 @@ public class cl_pesquisa_ip {
 						       "longitude"  ); 
 			
 		return lt_res;	
+		
+	}
+	
+	public void m_save_ips() {
+		
+		gt_web = gt_web.withColumn(gc_ts, functions.lit(gv_stamp));
+		
+		cl_util.m_save_log(gt_web, gc_table);
 		
 	}
 

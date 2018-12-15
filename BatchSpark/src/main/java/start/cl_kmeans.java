@@ -13,17 +13,17 @@ import org.apache.spark.sql.functions;
 
 import IpInfo.cl_IpInfo;
 import io.ipinfo.api.IPInfo;
-import io.ipinfo.api.errors.RateLimitedException;
+//import io.ipinfo.api.errors.RateLimitedException;
 import io.ipinfo.api.model.IPResponse;
 
-import org.apache.spark.sql.Column;
+//import org.apache.spark.sql.Column;
 
-import org.apache.spark.sql.Encoder;
+//import org.apache.spark.sql.Encoder;
 import org.apache.spark.sql.Encoders;
 
-import org.apache.spark.api.java.JavaRDD;
+/*import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.api.java.function.MapFunction;*/
 
 public class cl_kmeans {
 	
@@ -379,7 +379,7 @@ public class cl_kmeans {
 		
 	}
 	
-	public void m_ipinfo(Dataset<Row> lt_data) {
+	public static void m_ipinfo(Dataset<Row> lt_data) {
 		
 		final String gc_token = "dc695e943d23f0";
 		
@@ -389,10 +389,10 @@ public class cl_kmeans {
 		
 		lt_res = lt_data.select("ID_RESP_H").distinct();//.filter(col("prediction").equalTo(1));
 		
-		Dataset<String> lv_df = lt_res.map(
+		/*Dataset<String> lv_df = lt_res.map(
 			    (MapFunction<Row,String >) row -> "Name: " + row.getString(3),Encoders.STRING()
 			    	
-				);
+				);*/
 		
 		//fazer select na tabela local do IP info, e separa os IPs que não encontrou local pesquisa			
 		
@@ -433,32 +433,32 @@ public class cl_kmeans {
 		String lv_col[] = new String[8];
 		
 		
+		lv_col[0] = "ip";
+		lv_col[1] = "hostname";
+		lv_col[2] = "city";
+		lv_col[3] = "country";		
+		lv_col[4] = "region";  		
+		lv_col[5] = "org";     
+		lv_col[6] = "latitude";
+		lv_col[7] = "longitude";
 		
-		lv_col[0] = "hostname";
-		lv_col[1] = "city";
-		lv_col[2] = "country";		
-		lv_col[3] = "region";  		
-		lv_col[4] = "org";     
-		lv_col[5] = "latitude";
-		lv_col[6] = "longitude";
-		lv_col[7] = "ip";
 		
-		lt_res = lv_df1.toDF(lv_col);
+		lt_res = lv_df1.toDF();
 		lt_res.printSchema();
 		
 		lt_res.show();
 		
-		lv_df1.printSchema();
+		/*lv_df1.printSchema();
 		
-		lv_df1.show();
+		lv_df1.show();*/
 		
-		lv_df1.write()
+		/*lv_df1.write()
 		.format("org.apache.phoenix.spark")
 		.mode("overwrite")
 		.option("table", lc_table)
 		.option("zkUrl", cl_seleciona.gc_zkurl)
 		.option("autocommit", "true")
-		.save();
+		.save();*/
 		
 		//cl_util.m_save_log(lt_res, lc_table);
 		

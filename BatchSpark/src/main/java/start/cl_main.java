@@ -42,7 +42,7 @@ public class cl_main {
 	
 	//---------ATRIBUTOS---------//
 	
-	public static long gv_stamp;
+	public long gv_stamp;
 	
 	private Date gv_time = new Date();
 	
@@ -208,7 +208,7 @@ public class cl_main {
 			
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 			
-			go_ip = new cl_pesquisa_ip(gv_session);
+			go_ip = new cl_pesquisa_ip(gv_session, gv_stamp);
 			
 			go_ip.m_processa_ip(lt_res, "ID_RESP_H");
 			

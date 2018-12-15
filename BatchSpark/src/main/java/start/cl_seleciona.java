@@ -262,7 +262,7 @@ public class cl_seleciona {
 			      .options(gv_phoenix)							   
 			      .load()			      			      
 				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp))
-				  .filter(col("ID_RESP_H").equalTo("65.152.202.208")).limit(2);
+				  .filter(col("ID_RESP_H").equalTo("13.107.4.50")).limit(2);
 			     		
 		//cl_util.m_show_dataset(lt_data, ":LOG totais");
 		
@@ -276,11 +276,11 @@ public class cl_seleciona {
 			                  .sqlContext()
 			                  .read()
 			                  .format(gc_phoenix)
-			                  .options(gv_phoenix)							   
+			                  .options(gv_phoenix)					   
 			                  .load()
-			                  .join(lt_data,col(lv_field).equalTo("IP"),"left_anti");
+			                  .join(lt_data,col(lv_field).equalTo(col("IP")),"inner");
 			                  //.filter(col("IP").equalTo(lt_data.col(lv_field)));
-		
+				
 		return lt_res;
 	}
 	

@@ -17,7 +17,7 @@ public class cl_util {
 		
 		lt_data.printSchema();
 		
-		lt_data.show(5);
+		//lt_data.show(5);
 						
 	}
 	

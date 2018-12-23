@@ -14,6 +14,8 @@ import org.apache.spark.sql.SparkSession;
 import IpInfo.cl_IpInfo;
 import IpInfo.cl_pesquisa_ip;
 
+import static org.apache.spark.sql.functions.col;
+
 public class cl_main {
 	
 	//---------CONSTANTES---------//
@@ -210,7 +212,9 @@ public class cl_main {
 			
 			go_ip = new cl_pesquisa_ip(gv_session, gv_stamp);
 			
-			go_ip.m_processa_ip(lt_res, "ID_RESP_H");
+			lt_res = go_ip.m_processa_ip(lt_res, "ID_RESP_H");
+			
+			cl_util.m_save_csv(lt_res.drop("CENTROID"), "IPINFO_23_12ALL");
 			
 			//Após salvar os resultados em CSV chamar o  metodo para salvar na tabela os IP?ou ja salva após a consulta?
 			
@@ -229,6 +233,18 @@ public class cl_main {
 			cl_util.m_time_end();
 			
 			break;
+		
+		case 9:
+			
+			go_select.m_conf_phoenix("LOG", gv_session);
+			
+			//utilizar as colunas das outras familias mesmo? alterado o nome da coluna add numero 1
+			gt_data = go_select.m_seleciona(gc_stamp);
+				
+			
+			cl_util.m_show_dataset(gt_data, "NEW");
+			
+			break;			
 			
 		}		
 				

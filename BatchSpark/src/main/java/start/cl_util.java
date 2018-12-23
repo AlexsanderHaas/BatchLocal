@@ -16,12 +16,12 @@ public class cl_util {
 		try {
 			System.out.println("\n" + lv_desc + "\t" + lt_data.count());
 		} catch (Exception e) {
-			System.out.println("\nClasse CL_UTIL SHOW DATASET COUNT-Erro:" + lv_desc + "\t" + e);
+			System.out.println("\nClasse CL_UTIL Método SHOW_DATASET Função:COUNT. Chamada do método:" + lv_desc + "\t" + e);
 		}
 				
-		lt_data.printSchema();
+		//lt_data.printSchema();
 		
-		lt_data.show(5);
+		//lt_data.show(5);
 						
 	}
 	
@@ -51,8 +51,14 @@ public class cl_util {
 	
 	public static void m_save_log(Dataset<Row> lt_data, String lt_table) {
 		
-		long lv_num = lt_data.count();			
-			
+		long lv_num = 0;			
+		
+		try {
+			lv_num = lt_data.count();
+		} catch (Exception e) {
+
+		}				
+		
 		if(lv_num > 0) {
 			
 			lt_data.write()
@@ -76,7 +82,7 @@ public class cl_util {
 		
 		long lv_f = ( System.currentTimeMillis() - gv_ini ) / 1000;
 		
-		System.out.println(" A função foi executada em:\t" + lv_f +" Segundos");
+		System.out.println("\n A função foi executada em:\t" + lv_f +" Segundos");
 		
 	}	
 	

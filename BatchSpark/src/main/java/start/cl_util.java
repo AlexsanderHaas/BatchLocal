@@ -14,15 +14,17 @@ public class cl_util {
 	public static void m_show_dataset(Dataset<Row> lt_data, String lv_desc) {
 		
 		try {
+			
 			System.out.println("\n" + lv_desc + "\t" + lt_data.count());
-		} catch (Exception e) {
-			System.out.println("\nClasse CL_UTIL Método SHOW_DATASET Função:COUNT. Chamada do método:" + lv_desc + "\t" + e);
-		}
-				
-		//lt_data.printSchema();
-		
-		//lt_data.show(5);
 						
+			lt_data.printSchema();
+			
+			lt_data.show(5);
+			
+		} catch (Exception e) {
+			System.out.println("\nProblema: Classe CL_UTIL Método SHOW_DATASET. Chamada do método:" + lv_desc + "\t" + e);
+		}
+								
 	}
 	
 	public static void m_save_csv(Dataset<Row> lv_data, String lv_dir){

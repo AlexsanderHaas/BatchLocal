@@ -66,6 +66,8 @@ public class cl_pesquisa_ip {
 		
 		int lv_free = go_select.m_Limit_IpInfo(); //Verifica limite diario
 		
+		double lv = 100.4670;
+		
 		System.out.println("\nConsultas disponiveis no dia: " + lv_free);
 		
 		lt_ips = lt_data.select(lv_field).distinct().persist(StorageLevel.MEMORY_ONLY());
@@ -82,6 +84,8 @@ public class cl_pesquisa_ip {
 		
 		lt_ips_nf = m_ip_NotFound(lt_ips, lt_ips_hb);
 		
+		//cl_util.m_save_csv(lt_ips_nf, "Ip_Distinct_23_12");
+		
 		long lv_nf = 0;
 		
 		try {
@@ -90,7 +94,7 @@ public class cl_pesquisa_ip {
 			lv_nf = 1;
 			lt_ips_nf = lt_ips;	
 		}
-			
+						
 		if(lv_nf > 0 && lv_free > 0) { //Se não encontrou tudo na tabela pesquisa no Web Service os que faltam
 			
 			//System.out.println("\n Pesquisa no WEB Service: " + lv_nf);
@@ -173,7 +177,7 @@ public class cl_pesquisa_ip {
 				
 		Dataset<cl_IpInfo> lt_IpInfo = lt_ip.map( row->{ 
 			
-			//System.out.println("\n IP:"+row.getString(0));
+			System.out.println("\n IP:"+row.getString(0));
 			
 			cl_IpInfo lo_ip = new cl_IpInfo();	
 			
@@ -184,10 +188,11 @@ public class cl_pesquisa_ip {
 			try {
 				response = ipInfo.lookupIP(row.getString(0));
 			} catch (Exception e) {
-				System.out.println("Erro Web Service:"+e);
+				System.out.println("Erro Web Service: "+e);
 			}					
 			   
-	        //System.out.println("ALL:"+response.toString());			
+	        System.out.println("ALL:"+response.toString());		
+	        
 	        lo_ip.setIp(row.getString(0));
 	        
 	        lo_ip.setHostname(response.getHostname());
@@ -200,10 +205,14 @@ public class cl_pesquisa_ip {
             
             lo_ip.setOrg(response.getOrg());
             
-            lo_ip.setLatitude(Double.parseDouble(response.getLatitude()));
+            if(response.getLatitude() != null) {            	
+            	lo_ip.setLatitude(Double.parseDouble(response.getLatitude()));
+            }
             
-            lo_ip.setLongitude(Double.parseDouble(response.getLongitude()));
-					
+            if(response.getLongitude() != null) {            	
+            	lo_ip.setLongitude(Double.parseDouble(response.getLongitude()));
+            }           
+            					
 			return lo_ip;
 	
 		},Encoders.bean(cl_IpInfo.class));

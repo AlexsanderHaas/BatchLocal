@@ -206,7 +206,9 @@ public class cl_main {
 			
 			lv_stamp = "2018-12-10 00:01:00.000";
 			
-			go_select.m_conf_phoenix(gc_kmeans_ddos, gv_session);
+			//go_select.m_conf_phoenix(gc_kmeans_ddos, gv_session);
+			
+			go_select.m_conf_phoenix(gc_kmeans_scan, gv_session);
 			
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 			

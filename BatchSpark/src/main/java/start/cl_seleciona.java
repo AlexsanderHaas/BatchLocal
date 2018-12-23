@@ -267,7 +267,7 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      			      
-				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp));
+				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp)).filter(col("PREDICTION").equalTo(1));
 				  //.filter(col("ID_RESP_H").equalTo("23.15.4.8")).limit(2);
 			     		
 		cl_util.m_show_dataset(lt_data, "HBase: LOG totais do KMEANS: ");

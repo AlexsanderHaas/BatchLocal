@@ -55,16 +55,9 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      
-			      //.filter("TIPO = 'CONN' OR TIPO = 'DNS'");//filter("TS_CODE = TO_TIMESTAMP ('"+gc_stamp+"')"); //" AND ( TIPO = 'CONN' OR TIPO = 'DNS' )");
-			      .filter(col("TS_CODE").gt(lv_stamp)) //.filter(col(cl_processa.gc_service).equalTo("http"));
+			      .filter(col(gc_tsc).gt(lv_stamp))
 			      .persist(StorageLevel.MEMORY_ONLY());
-		
-			      //.filter(col("TIPO").equalTo(gc_conn));*/
-							   		
-		//lv_data.createOrReplaceTempView(gv_table); //cria uma tabela temporaria, para acessar via SQL
-		
-		System.out.println("Conexões TOTAL: \t"+lt_data.count() + "\n\n");
-		
+				
 		return lt_data;
 				
 	}
@@ -253,7 +246,7 @@ public class cl_seleciona {
 			      .load()			      			      
 				  .filter(col("TS_CODE").gt(lv_stamp));
 			     		
-		//cl_util.m_show_dataset(lt_data, ":LOG totais");
+		//cl_util.m_show_dataset(lt_data, "LOG totais das análises: ");
 		
 		return lt_data;
 		
@@ -269,11 +262,10 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      			      
-				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp)).filter(col("PREDICTION").equalTo(1));
-				  //.filter(col("ID_RESP_H").equalTo("23.15.4.8")).limit(2);
-			     		
-		cl_util.m_show_dataset(lt_data, "HBase: LOG totais do KMEANS: ");
+				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp));
 		
+		//cl_util.m_show_dataset(lt_data, "HBase: LOG totais do KMEANS: ");
+					
 		return lt_data;
 		
 	}
@@ -287,8 +279,10 @@ public class cl_seleciona {
 			                  .options(gv_phoenix)					   
 			                  .load()
 			                  .join(lt_data,col(lv_field).equalTo(col("IP")),"inner");
-			                  //.filter(col("IP").equalTo(lt_data.col(lv_field)));
-				//cl_util.m_show_dataset(lt_res, "IPINFO");
+			                  
+		
+		cl_util.m_show_dataset(lt_res, "HBase: IpInfo: ");
+		
 		return lt_res;
 	}
 	

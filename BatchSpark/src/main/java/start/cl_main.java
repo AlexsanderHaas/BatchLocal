@@ -67,9 +67,7 @@ public class cl_main {
 	private cl_processa go_processa;
 	
 	private cl_seleciona go_select;
-	
-	private cl_get_results go_results;
-	
+			
 	private cl_pesquisa_ip go_ip;
 	
 	//---------METODOS---------//
@@ -109,39 +107,7 @@ public class cl_main {
 			}
 			
 			break;
-		
-		case 2: // Seleciona apenas o CONN e processa ORIG e RESP salvando os dados na tabela
-		
-			go_select.m_conf_phoenix(gc_table, gv_session);
-			
-			gt_data = go_select.m_seleciona_conn(gc_stamp);
-			
-			cl_util.m_show_dataset(gt_data, "Totais de CONN:");
-			
-			go_processa.m_process_orig(gt_data, gv_stamp);
-			
-			go_processa.m_process_resp(gt_data, gv_stamp);		
-			
-			break;
-		
-		case 3: //Seleciona os resultados da opção 2 que foram salvos nas tabelas
-			
-			go_results = new cl_get_results();
-			
-			go_results.m_start(gv_session);
-			
-			break;
-					
-		case 4: //Seleciona os dados CONN processando os totais
-			
-			go_select.m_conf_phoenix(gc_table, gv_session);
-			
-			gt_data = go_select.m_seleciona_conn(gc_stamp);
-			
-			go_processa.m_process_totais(gt_data);
-			
-			break;
-						
+				
 		case 5: //Processa e salva as Análises na tabela
 					
 			go_select.m_conf_phoenix(gc_table, gv_session);
@@ -192,47 +158,33 @@ public class cl_main {
 			
 			cl_util.m_time_start();
 			
-			/*//Totais
+			//Totais
 			
 			go_select.m_conf_phoenix(gc_totais, gv_session);
 			
 			lt_res = go_select.m_select_LogTotais(lv_stamp);
 			
 			go_processa.m_export_totais(lt_res);
-			
-			*/
-			
+									
 			//Kmeans DDoS
 			
 			lo_kmeans = new cl_kmeans(gc_stamp, gv_stamp);
 			
 			lv_stamp = "2018-12-10 00:01:00.000";
 			
-			//go_select.m_conf_phoenix(gc_kmeans_ddos, gv_session);
+			go_select.m_conf_phoenix(gc_kmeans_ddos, gv_session);
+						
+			lt_res = go_select.m_select_LogKmeans(lv_stamp);
+									
+			lo_kmeans.m_export_kmeans_ddos(lt_res);
+			
+			//Kmeans Port Scan
 			
 			go_select.m_conf_phoenix(gc_kmeans_scan, gv_session);
 			
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 			
-			go_ip = new cl_pesquisa_ip(gv_session, gv_stamp);
-			
-			lt_res = go_ip.m_processa_ip(lt_res, "ID_RESP_H");
-			
-			cl_util.m_save_csv(lt_res.drop("CENTROID"), "IPINFO_23_12ALL");
-			
-			//Após salvar os resultados em CSV chamar o  metodo para salvar na tabela os IP?ou ja salva após a consulta?
-			
-			//lo_kmeans.m_ipinfo(lt_res);//teste
-			
-			//lo_kmeans.m_export_kmeans_ddos(lt_res);
-			
-			//Kmeans Port Scan
-			
-			/*go_select.m_conf_phoenix(gc_kmeans_scan, gv_session);
-			
-			lt_res = go_select.m_select_LogKmeans(lv_stamp);
-			
-			lo_kmeans.m_export_kmeans_ScanPort(lt_res);*/
+			lo_kmeans.m_export_kmeans_ScanPort(lt_res);
 			
 			cl_util.m_time_end();
 			
@@ -244,8 +196,7 @@ public class cl_main {
 			
 			//utilizar as colunas das outras familias mesmo? alterado o nome da coluna add numero 1
 			gt_data = go_select.m_seleciona(gc_stamp);
-				
-			
+							
 			cl_util.m_show_dataset(gt_data, "NEW");
 			
 			break;			

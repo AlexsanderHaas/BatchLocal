@@ -56,7 +56,9 @@ public class cl_seleciona {
 			      .options(gv_phoenix)							   
 			      .load()			      
 			      //.filter("TIPO = 'CONN' OR TIPO = 'DNS'");//filter("TS_CODE = TO_TIMESTAMP ('"+gc_stamp+"')"); //" AND ( TIPO = 'CONN' OR TIPO = 'DNS' )");
-			      .filter(col("TS_CODE").gt(lv_stamp)); //.filter(col(cl_processa.gc_service).equalTo("http"));
+			      .filter(col("TS_CODE").gt(lv_stamp)) //.filter(col(cl_processa.gc_service).equalTo("http"));
+			      .persist(StorageLevel.MEMORY_ONLY());
+		
 			      //.filter(col("TIPO").equalTo(gc_conn));*/
 							   		
 		//lv_data.createOrReplaceTempView(gv_table); //cria uma tabela temporaria, para acessar via SQL
@@ -200,8 +202,8 @@ public class cl_seleciona {
 			      .options(gv_phoenix)							   
 			      .load()			      
 			      .filter(col("TIPO").equalTo(gc_conn))
-			      .filter(col("TS_CODE").gt(lv_stamp))			      
-				  .sort(col("TS_CODE").desc())
+			      .filter(col("TS_CODE").gt(lv_stamp))//.limit(100)			      
+				  //.sort(col("TS_CODE").desc())
 				  .persist(StorageLevel.MEMORY_ONLY());//Add 23/12/18					   
 	
 		/*Dataset<Row> lt_orig;	

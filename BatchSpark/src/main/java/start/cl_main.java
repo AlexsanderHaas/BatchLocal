@@ -26,7 +26,7 @@ public class cl_main {
 	
 	final static String gc_kmeans_scan 	= "LOG_KMEANS_SCAN_PORT";
 	
-	final static String gc_totais 	    = "LOG_TOTAIS";
+	final static String gc_totais 	    = "LOG_TOTAIS1";//"LOG_TOTAIS";
 	
 	final static String gc_conn_ip 		= "CONN_IP1";
 	
@@ -48,9 +48,9 @@ public class cl_main {
 	
 	private Date gv_time = new Date();
 	
-	private static int gv_submit = 0; //1=Cluster 
+	private static int gv_submit = 1; //1=Cluster 
 	
-	private static int gv_batch = 8;
+	private static int gv_batch = 5;
 	
 	private Dataset<Row> gt_data;
 	
@@ -146,7 +146,9 @@ public class cl_main {
 					
 			go_select.m_conf_phoenix(gc_table, gv_session);
 			
-			gt_data = go_select.m_seleciona(gc_stamp);
+			//gt_data = go_select.m_seleciona(gc_stamp);
+			
+			gt_data = go_select.m_seleciona_conn(gc_stamp);
 			
 			go_processa.m_start_analyzes(gt_data);			
 			

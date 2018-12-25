@@ -244,7 +244,11 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      			      
-				  .filter(col("TS_CODE").gt(lv_stamp));
+				  .filter(col("TS_CODE").gt(lv_stamp))
+				  .persist(StorageLevel.MEMORY_ONLY());
+		
+			/*	  .filter(col("TIPO").equalTo("PROTO_SERVICE_ORIG_H"))
+				  .limit(10000);*/
 			     		
 		//cl_util.m_show_dataset(lt_data, "LOG totais das análises: ");
 		
@@ -262,7 +266,8 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      			      
-				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp));
+				  .filter(col(cl_kmeans.gc_ts_code).gt(lv_stamp))
+				  .persist(StorageLevel.MEMORY_ONLY());
 		
 		//cl_util.m_show_dataset(lt_data, "HBase: LOG totais do KMEANS: ");
 					
@@ -279,9 +284,8 @@ public class cl_seleciona {
 			                  .options(gv_phoenix)					   
 			                  .load()
 			                  .join(lt_data,col(lv_field).equalTo(col("IP")),"inner");
-			                  
-		
-		cl_util.m_show_dataset(lt_res, "HBase: IpInfo: ");
+			                  		
+		//cl_util.m_show_dataset(lt_res, "HBase: IpInfo: ");
 		
 		return lt_res;
 	}

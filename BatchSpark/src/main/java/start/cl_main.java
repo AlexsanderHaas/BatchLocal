@@ -20,7 +20,7 @@ public class cl_main {
 	
 	//---------CONSTANTES---------//
 	
-	final static String gc_table 		= "JSON00";
+	final static String gc_table 		= "LOG";//"JSON00";
 	
 	final static String gc_kmeans_ddos 	= "LOG_KMEANS_DDOS";
 	
@@ -48,9 +48,9 @@ public class cl_main {
 	
 	private Date gv_time = new Date();
 	
-	private static int gv_submit = 1; //1=Cluster 
+	private static int gv_submit = 0; //1=Cluster 
 	
-	private static int gv_batch = 5;
+	private static int gv_batch = 8;
 	
 	private Dataset<Row> gt_data;
 	
@@ -58,7 +58,7 @@ public class cl_main {
     
 	private static SparkContext gv_context;
 	                        
-	private static SparkSession gv_session;
+	public static SparkSession gv_session;
 	
 	//---------ATRIBUTOS-CLASSES---------//
 	
@@ -152,7 +152,11 @@ public class cl_main {
 			
 		case 8: //Get resultados
 			
+			cl_pesquisa_ip lo_ip = new cl_pesquisa_ip(gv_session, gv_stamp);
+			
 			Dataset<Row> lt_res;
+			
+			Dataset<Row> lt_ips;
 			
 			String lv_stamp = "2018-12-05 12:20:00.000";
 			
@@ -168,7 +172,7 @@ public class cl_main {
 									
 			//Kmeans DDoS
 			
-			lo_kmeans = new cl_kmeans(gc_stamp, gv_stamp);
+			/*lo_kmeans = new cl_kmeans(gc_stamp, gv_stamp);
 			
 			lv_stamp = "2018-12-10 00:01:00.000";
 			
@@ -176,18 +180,27 @@ public class cl_main {
 						
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 									
-			lo_kmeans.m_export_kmeans_ddos(lt_res);
+			lo_kmeans.m_export_kmeans_ddos(lt_res);*/
+			
+			/*lt_ips = lo_ip.m_processa_ip(lt_res.filter(col(cl_kmeans.gc_service).equalTo(gc_http))
+						  .filter(col(cl_kmeans.gc_prediction).equalTo("1"))
+					   	  , cl_kmeans.gc_resp_h);
+			
+			cl_util.m_show_dataset(lt_ips, "DDOs com IpInfo: ");*/
+			
+			//cl_util.m_save_csv(lt_ips, "DDoS_HTTP_IpInfo");	
+			
 			
 			//Kmeans Port Scan
 			
-			go_select.m_conf_phoenix(gc_kmeans_scan, gv_session);
+			/*go_select.m_conf_phoenix(gc_kmeans_scan, gv_session);
 			
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 			
 			lo_kmeans.m_export_kmeans_ScanPort(lt_res);
 			
 			cl_util.m_time_end();
-			
+			*/
 			break;
 		
 		case 9:

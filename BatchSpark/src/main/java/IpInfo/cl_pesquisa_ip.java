@@ -46,7 +46,7 @@ public class cl_pesquisa_ip {
 		
 	}
 	
-	public Dataset<Row> m_processa_ip(Dataset<Row> lt_data, String lv_field) {
+	public Dataset<Row> m_processa_ip(Dataset<Row> lt_data, String lv_field, int lv_limite) { //Passar 0 para pesquisar apenas no HBase
 		
 		Dataset<Row> lt_ips;
 		
@@ -66,11 +66,13 @@ public class cl_pesquisa_ip {
 		
 		int lv_free = go_select.m_Limit_IpInfo(); //Verifica limite diario
 		
-		double lv = 100.4670;
-		
 		System.out.println("\nConsultas disponiveis no dia: " + lv_free);
 		
-		lt_ips = lt_data.select(lv_field).distinct().persist(StorageLevel.MEMORY_ONLY());
+		cl_util.m_show_dataset(lt_data, "Dados a consultar: ");		
+		
+		lt_ips = lt_data.select(lv_field)
+						.distinct()						
+						.persist(StorageLevel.MEMORY_ONLY());
 				
 		cl_util.m_show_dataset(lt_ips, "Número de IPS DISTINCT: ");						
 		
@@ -95,10 +97,21 @@ public class cl_pesquisa_ip {
 			lt_ips_nf = lt_ips;	
 		}
 						
-		if(lv_nf > 0 && lv_free > 0) { //Se não encontrou tudo na tabela pesquisa no Web Service os que faltam
+		if(lv_nf     > 0 && 
+		   lv_free   > 0 &&
+		   lv_limite > 0) { //Se não encontrou tudo na tabela pesquisa no Web Service os que faltam
 			
 			//System.out.println("\n Pesquisa no WEB Service: " + lv_nf);
-			m_search_WebService(lt_ips_nf.limit(lv_free)); //Máximo 1000 consultas no dia
+			
+			if(lv_limite < lv_free) {
+			
+				m_search_WebService(lt_ips_nf.limit(lv_limite)); //Máximo 1000 consultas no dia
+			
+			}else {
+				
+				m_search_WebService(lt_ips_nf.limit(lv_free)); //Máximo 1000 consultas no dia
+				
+			}						
 			
 			try {
 				lt_union = lt_ips_hb.union(gt_ip_web.drop(gc_ts));
@@ -122,6 +135,7 @@ public class cl_pesquisa_ip {
 			lt_all = m_join_IpInfo(lt_data, lt_union);		
 			
 			cl_util.m_save_log(gt_ip_web, gc_table); 
+			
 			//Pois se salvar logo após a consulta, 
 			//ocorre EXCEPTION de concorrencia, pois nem salvou na tabela e ja consulta novamente. Assim salva apenas no final do processamento.
 			
@@ -141,7 +155,8 @@ public class cl_pesquisa_ip {
 				
 		try {
 			
-			lt_res = lt_data.join(lt_hb, col(gv_field).equalTo(col(gc_ip)),"left_anti");
+			lt_res = lt_data.join(lt_hb, col(gv_field).equalTo(col(gc_ip)),"left_anti")
+						    .persist(StorageLevel.MEMORY_ONLY());;
 					
 			lt_res = lt_res.select(gv_field).distinct();
 			
@@ -158,7 +173,8 @@ public class cl_pesquisa_ip {
 		
 		Dataset<Row> lt_res;
 				
-		lt_res = lt_data.join(lt_ip, lt_data.col(gv_field).equalTo(lt_ip.col(gc_ip)),"left_outer");
+		lt_res = lt_data.join(lt_ip, lt_data.col(gv_field).equalTo(lt_ip.col(gc_ip)),"left_outer")
+						.persist(StorageLevel.MEMORY_ONLY());
 							
 		cl_util.m_show_dataset(lt_res, "JOIN: Agrupou o IPInfo com os dados do banco:");
 		
@@ -173,11 +189,11 @@ public class cl_pesquisa_ip {
 		
 		Dataset<Row> lt_ip;
 				
-		lt_ip = lt_data.select(gv_field).distinct().limit(5);
+		lt_ip = lt_data.select(gv_field).distinct();//.limit(5);
 				
 		Dataset<cl_IpInfo> lt_IpInfo = lt_ip.map( row->{ 
 			
-			System.out.println("\n IP:"+row.getString(0));
+			//System.out.println("\n IP:"+row.getString(0));
 			
 			cl_IpInfo lo_ip = new cl_IpInfo();	
 			
@@ -191,7 +207,7 @@ public class cl_pesquisa_ip {
 				System.out.println("Erro Web Service: "+e);
 			}					
 			   
-	        System.out.println("ALL:"+response.toString());		
+	        //System.out.println("ALL:"+response.toString());		
 	        
 	        lo_ip.setIp(row.getString(0));
 	        

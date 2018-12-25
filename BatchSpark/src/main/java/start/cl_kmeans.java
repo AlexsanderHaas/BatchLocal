@@ -12,6 +12,7 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
 
 import IpInfo.cl_IpInfo;
+import IpInfo.cl_pesquisa_ip;
 import io.ipinfo.api.IPInfo;
 //import io.ipinfo.api.errors.RateLimitedException;
 import io.ipinfo.api.model.IPResponse;
@@ -39,6 +40,8 @@ public class cl_kmeans {
 	final static String gc_ts_code 		= "TS_CODE";
 	final static String gc_ts_filtro	= "TS_FILTRO";
 	final static String gc_rowid		= "ROW_ID";
+	
+	final static String gc_prediction	= "PREDICTION";
 	       
 	final static String gc_ts 			= "TS";
 	final static String gc_proto 		= "PROTO";
@@ -329,28 +332,30 @@ public class cl_kmeans {
 	}
 	
 	public void m_export_kmeans_ddos(Dataset<Row> lt_data) {
-						
-		m_export_process(lt_data, gc_service, cl_main.gc_http);
 		
-		m_export_process(lt_data, gc_service, cl_main.gc_ssl);
+		String lv_dd = "DDoS_";
+				
+		m_export_process(lt_data, gc_orig_h, gc_service, cl_main.gc_http, lv_dd);
+				
+		//m_export_process(lt_data, gc_orig_h, gc_service, cl_main.gc_ssl, lv_dd);
 		
-		m_export_process(lt_data, gc_service, cl_main.gc_ssh);
+		m_export_process(lt_data, gc_orig_h, gc_service, cl_main.gc_ssh, lv_dd);
 		
 	}
 	
 	public void m_export_kmeans_ScanPort(Dataset<Row> lt_data) {
 		
-		m_export_process(lt_data, gc_proto, cl_main.gc_tcp);
+		String lv_dd = "Scan_";
 		
-		m_export_process(lt_data, gc_proto, cl_main.gc_udp);
+		m_export_process(lt_data, gc_orig_h, gc_proto, cl_main.gc_tcp, lv_dd); //São muitos IPs para gerar o fluxo por tempo
+		
+		m_export_process(lt_data, gc_orig_h, gc_proto, cl_main.gc_udp, lv_dd);
 				
 	}
 	
-	public void m_export_process(Dataset<Row> lt_data, String lv_col, String lv_tipo) {
+	public void m_export_process(Dataset<Row> lt_data, String lv_pivot, String lv_col, String lv_tipo, String lv_dd) {
 				
 		Dataset<Row> lt_res;
-		
-		String lv_dd = "DDoS_";
 		
 		String lc_format = "dd.MM.yyyy HH";	
 		
@@ -362,7 +367,7 @@ public class cl_kmeans {
 		Dataset<Row> lt_count;
 		
 		lt_count = lt_res.groupBy(gc_ts)
-	                     .pivot(gc_orig_h)						 
+	                     .pivot(lv_pivot)						 
 	                     .sum(gc_count)
 	                     .sort(col(gc_ts));
 		
@@ -370,7 +375,7 @@ public class cl_kmeans {
 		
 		lt_count = lt_res.withColumn(gc_ts, date_format(col(gc_ts), lc_format))
 				         .groupBy(gc_ts)
-				         .pivot(gc_orig_h)						 
+				         .pivot(lv_pivot)						 
                          .sum(gc_count)
                          .sort(col(gc_ts));
 

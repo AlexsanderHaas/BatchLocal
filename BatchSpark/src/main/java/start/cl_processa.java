@@ -1,13 +1,20 @@
 package start;
 
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.date_format;
 import static org.apache.spark.sql.functions.to_timestamp;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.spark.sql.AnalysisException;
 import org.apache.spark.sql.Column;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.functions;
+import org.apache.spark.storage.StorageLevel;
+
+import IpInfo.cl_pesquisa_ip;
 
 import static org.apache.spark.sql.functions.col;
 
@@ -32,8 +39,7 @@ public class cl_processa {
 	final String gc_tipo		 = "TIPO";
 	final String gc_count   	 = "COUNT";
 	final String gc_ts   	 	 = "TS";
-	
-	
+		
 	final String gc_duration     = "DURATION";
 	final String gc_o_bytes      = "ORIG_IP_BYTES";
 	final String gc_r_bytes      = "RESP_IP_BYTES";
@@ -41,6 +47,8 @@ public class cl_processa {
 	final String gc_orig_bytes   = "ORIG_BYTES";
 	final String gc_resp_pkts	 = "RESP_PKTS";
 	final String gc_resp_bytes   = "RESP_BYTES";	
+
+//------------------Processar------------------------//
 	
 	final String lc_duration     = "SUM(DURATION) AS DURATION, ";
 	final String lc_o_bytes      = "SUM(ORIG_IP_BYTES) AS ORIG_IP_BYTES, "; 
@@ -57,6 +65,8 @@ public class cl_processa {
 						  lc_orig_bytes +
 						  lc_resp_pkts  +
 						  lc_resp_bytes;	
+	
+	final String lc_v = ", "; 
 	
 	//---------TIPOS DE TOTAIS---------//
 	
@@ -219,8 +229,6 @@ public class cl_processa {
 	
 	public void m_start_analyzes(Dataset<Row> lt_data) {
 		
-		String lc_v = ", ";
-		
 		String lv_group;
 				
 		lt_data.createOrReplaceTempView("LOG"); //cria uma tabela temporaria, para acessar via SQL
@@ -358,96 +366,200 @@ public class cl_processa {
 	
 	public void m_export_totais(Dataset<Row> lt_data) {
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_count)
-								  .filter(col(gc_tipo).equalTo(lc_proto)), lc_proto);
+		/*cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_count)
+								  .filter(col(gc_tipo).equalTo(lc_proto))
+								  .sort(gc_ts), lc_proto);
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_orig_h, gc_count)
+		m_export_pivot(lt_data, gc_proto, "", "", lc_proto); //Historico por TS da utilização de Protocolo
+		
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_orig_h, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_proto_orig_h))
-								  .sort(gc_proto, gc_orig_h), lc_proto_orig_h);
+								  .sort(gc_ts, gc_proto, gc_orig_h), lc_proto_orig_h);
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_orig_h, gc_orig_p, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_orig_h, gc_orig_p, gc_count)
 				  				  .filter(col(gc_tipo).equalTo(lc_proto_orig_h_p))
-				  				  .sort(gc_proto, gc_orig_h, gc_orig_p ), lc_proto_orig_h_p);
+				  				  .sort(gc_ts, gc_proto, gc_orig_h, gc_orig_p ), lc_proto_orig_h_p);
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_resp_h, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_resp_h, gc_count)
 			      				  .filter(col(gc_tipo).equalTo(lc_proto_resp_h))
-   		      					  .sort(gc_proto, gc_resp_h), lc_proto_resp_h);
+   		      					  .sort(gc_ts, gc_proto, gc_resp_h), lc_proto_resp_h);
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_resp_h, gc_resp_p, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_resp_h, gc_resp_p, gc_count)
 				  				  .filter(col(gc_tipo).equalTo(lc_proto_resp_h_p))
-				  				  .sort(gc_proto, gc_resp_h, gc_resp_p), lc_proto_resp_h_p);
+				  				  .sort(gc_ts, gc_proto, gc_resp_h, gc_resp_p), lc_proto_resp_h_p);
 		
-		cl_util.m_save_csv(lt_data.select(gc_service, gc_count)
-								  .filter(col(gc_tipo).equalTo(lc_service)), lc_service);
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_service, gc_count)
+								  .filter(col(gc_tipo).equalTo(lc_service))
+								  .sort(gc_ts), lc_service);
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_service, gc_count)
+		m_export_pivot(lt_data, gc_service, "", "", lc_service); //Historico por TS da utilização de Service
+		
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_service, gc_count)
 				  				  .filter(col(gc_tipo).equalTo(lc_proto_service))
-								  .sort(gc_proto, gc_service), lc_proto_service);
+								  .sort(gc_ts, gc_proto, gc_service), lc_proto_service);
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_service, gc_orig_h, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_service, gc_orig_h, gc_count)
 				  				  .filter(col(gc_tipo).equalTo(lc_p_s_orig_h))
-				  				  .sort(gc_proto, gc_service, gc_orig_h), lc_p_s_orig_h);
+				  				  .sort(gc_ts, gc_proto, gc_service, gc_orig_h), lc_p_s_orig_h);
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_service, gc_orig_h, gc_orig_p, gc_count)
+		m_export_pivot(lt_data, gc_orig_h, gc_service, cl_main.gc_http, lc_p_s_orig_h); //Historico por TS da utilização de HTTP por IP
+		
+		
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_service, gc_orig_h, gc_orig_p, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_p_s_orig_h_p))
-								  .sort(gc_proto, gc_service, gc_orig_h, gc_orig_p), lc_p_s_orig_h_p);
+								  .sort(gc_ts, gc_proto, gc_service, gc_orig_h, gc_orig_p), lc_p_s_orig_h_p);
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_service, gc_resp_h, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_service, gc_resp_h, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_p_s_resp_h))
-								  .sort(gc_proto, gc_service, gc_resp_h), lc_p_s_resp_h);
+								  .sort(gc_ts, gc_proto, gc_service, gc_resp_h), lc_p_s_resp_h);
 		
-		cl_util.m_save_csv(lt_data.select(gc_proto, gc_service, gc_resp_h, gc_resp_p, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_proto, gc_service, gc_resp_h, gc_resp_p, gc_count)
 				  				  .filter(col(gc_tipo).equalTo(lc_p_s_resp_h_p))
-				  				  .sort(gc_proto, gc_service, gc_resp_h, gc_resp_p), lc_p_s_resp_h_p);
+				  				  .sort(gc_ts, gc_proto, gc_service, gc_resp_h, gc_resp_p), lc_p_s_resp_h_p);
 		
 		//-----------Conexões IP Origem--------------------------------------//
 		
-		cl_util.m_save_csv(lt_data.select(gc_orig_h, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_orig_h, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_orig_h))
-								  .sort(gc_orig_h), lc_orig_h);
+								  .sort(gc_ts, gc_orig_h), lc_orig_h);
 		
-		cl_util.m_save_csv(lt_data.select(gc_orig_p, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_orig_p, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_orig_p))
-								  .sort(gc_orig_p), lc_orig_p);
+								  .sort(gc_ts, gc_orig_p), lc_orig_p);
 		
-		cl_util.m_save_csv(lt_data.select(gc_orig_h, gc_orig_p, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_orig_h, gc_orig_p, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_orig_h_p))
-								  .sort(gc_orig_h, gc_orig_p), lc_orig_h_p);		
+								  .sort(gc_ts, gc_orig_h, gc_orig_p), lc_orig_h_p);		
 		
-		cl_util.m_save_csv(lt_data.select(gc_orig_h, gc_orig_p, gc_resp_h, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_orig_h, gc_orig_p, gc_resp_h, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_orig_h_p_resp_h ))
-								  .sort(gc_orig_h, gc_orig_p), lc_orig_h_p_resp_h );
+								  .sort(gc_ts, gc_orig_h, gc_orig_p), lc_orig_h_p_resp_h );*/
 		
 		//-----------Conexões IP Resposta--------------------------------------//
 		
-		cl_util.m_save_csv(lt_data.select(gc_resp_h, gc_count)
-								  .filter(col(gc_tipo).equalTo(lc_resp_h))
-								  .sort(gc_resp_h), lc_resp_h);
+		m_export_resp_h(lt_data);// Com o IpInfo
 		
-		cl_util.m_save_csv(lt_data.select(gc_resp_p, gc_count)
+		/*Dataset<Row> lt_filt = lt_data.select(gc_ts, gc_resp_h, gc_count)
+								      .filter(col(gc_tipo).equalTo(lc_resp_h))
+								      .sort(gc_ts, gc_resp_h)
+								      .persist(StorageLevel.MEMORY_ONLY());
+		
+		cl_util.m_save_csv(lt_filt, lc_resp_h);
+				
+		cl_pesquisa_ip lo_ip = new cl_pesquisa_ip(cl_main.gv_session, gv_stamp);
+		
+		Dataset<Row> lt_ips = lt_filt.select(gc_resp_h, gc_count)
+				  					 .groupBy(gc_resp_h)
+				  					 .sum(gc_count)
+				  					 .withColumnRenamed("sum(count)", gc_count)
+				  					 .sort(col(gc_count).desc());
+				  					 		
+		//lt_ips = lt_ips.withColumnRenamed("sum(count)", gc_count).sort(col(gc_count).desc());
+		
+		lo_ip.m_processa_ip(lt_ips.limit(1000), cl_kmeans.gc_resp_h, 100); //Consulta no WebService
+		
+		lt_filt = lo_ip.m_processa_ip(lt_filt, cl_kmeans.gc_resp_h, 0);//Consulta no HBase
+	
+		cl_util.m_show_dataset(lt_filt, "DDOs com IpInfo: ");
+		
+		cl_util.m_save_csv(lt_filt.sort(col(gc_count).desc()), "IPS_SEARCH_INFO_WEB");*/
+		
+		//cl_util.m_save_csv(lt_ips, "IPS_SEARCH_INFO");
+		
+		
+		/*cl_util.m_save_csv(lt_data.select(gc_ts, gc_resp_p, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_resp_p))
-								  .sort(gc_resp_p), lc_resp_p);
+								  .sort(gc_ts, gc_resp_p), lc_resp_p);
 		
-		cl_util.m_save_csv(lt_data.select(gc_resp_h, gc_resp_p, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_resp_h, gc_resp_p, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_resp_h_p))
-								  .sort(gc_resp_h, gc_resp_p), lc_resp_h_p);
+								  .sort(gc_ts, gc_resp_h, gc_resp_p), lc_resp_h_p);
 
-		cl_util.m_save_csv(lt_data.select(gc_resp_h, gc_resp_p, gc_orig_h, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_resp_h, gc_resp_p, gc_orig_h, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_resp_h_p_orig_h ))
-								  .sort(gc_resp_h, gc_resp_p), lc_resp_h_p_orig_h );
+								  .sort(gc_ts, gc_resp_h, gc_resp_p), lc_resp_h_p_orig_h );
 				
 		
 		//-----------Conexões IP Origem com IP Resposta------------------------//
 		
-		cl_util.m_save_csv(lt_data.select(gc_orig_h, gc_resp_h, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_orig_h, gc_resp_h, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_orig_h_resp_h))
-								  .sort(gc_orig_h, gc_resp_h), lc_orig_h_resp_h);
+								  .sort(gc_ts, gc_orig_h, gc_resp_h), lc_orig_h_resp_h);
 		
-		cl_util.m_save_csv(lt_data.select(gc_orig_h, gc_orig_p, gc_resp_h, gc_resp_p, gc_count)
+		cl_util.m_save_csv(lt_data.select(gc_ts, gc_orig_h, gc_orig_p, gc_resp_h, gc_resp_p, gc_count)
 								  .filter(col(gc_tipo).equalTo(lc_orig_h_p_resp_h_p))
-								  .sort(gc_orig_h, gc_orig_p), lc_orig_h_p_resp_h_p);
+								  .sort(gc_ts, gc_orig_h, gc_orig_p), lc_orig_h_p_resp_h_p);
+			*/
 		
-	}	
+	}
+	
+	public void m_export_resp_h(Dataset<Row> lt_data) {
+		
+		Dataset<Row> lt_filt;
+		
+		lt_filt = lt_data.filter(col(gc_tipo).equalTo(lc_resp_h))
+					     .sort(gc_ts, gc_resp_h)
+					     .persist(StorageLevel.MEMORY_ONLY());
+			
+		cl_util.m_save_csv(lt_filt, lc_resp_h);
+
+		cl_pesquisa_ip lo_ip = new cl_pesquisa_ip(cl_main.gv_session, gv_stamp);
+
+		Dataset<Row> lt_ips;
+		
+		lt_ips = lt_filt.select(gc_resp_h, gc_count)
+					    .groupBy(gc_resp_h)
+					    .sum(gc_count)
+					    .withColumnRenamed("sum(count)", gc_count)
+					    .sort(col(gc_count).desc());
+		
+		lo_ip.m_processa_ip(lt_ips.limit(1000), cl_kmeans.gc_resp_h, 100); //Consulta no WebService
+		
+		lt_filt = lo_ip.m_processa_ip(lt_filt, cl_kmeans.gc_resp_h, 0);//Consulta no HBase
+		
+		cl_util.m_show_dataset(lt_filt, "DDOs com IpInfo: ");
+		
+		cl_util.m_save_csv(lt_filt.sort(col(gc_count).desc()), "IPS_SEARCH_INFO_WEB");
+		
+	}
+	
+	public void m_export_pivot(Dataset<Row> lt_data, String lv_pivot, String lv_col, String lv_tipo, String lv_dd) {
+		
+		Dataset<Row> lt_res;
+		
+		String lc_format = "dd.MM.yyyy";	
+		
+		if(lv_col.isEmpty()) {
+			
+			lt_res = lt_data;
+			
+		}else {
+			
+			lt_res = lt_data.filter(col(lv_col).equalTo(lv_tipo))
+							.sort(gc_ts);
+				
+		}
+				
+		Dataset<Row> lt_count;
+		
+		lt_count = lt_res.groupBy(gc_ts)
+	                     .pivot(lv_pivot)						 
+	                     .sum(gc_count)
+	                     .sort(col(gc_ts));
+		
+		cl_util.m_save_csv(lt_count, lv_dd + "_" + lv_tipo + "_PIVOT_H");
+		
+		lt_count = lt_res.withColumn(gc_ts, date_format(col(gc_ts), lc_format))
+				         .groupBy(gc_ts)
+				         .pivot(lv_pivot)						 
+                         .sum(gc_count)
+                         .sort(col(gc_ts));
+
+		cl_util.m_save_csv(lt_count, lv_dd + "_" + lv_tipo + "_PIVOT_D");	
+		
+		
+		
+	}
 	
 }
 

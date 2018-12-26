@@ -11,10 +11,10 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
-import IpInfo.cl_IpInfo;
 import IpInfo.cl_pesquisa_ip;
 
 import static org.apache.spark.sql.functions.col;
+import static org.apache.spark.sql.functions.date_format;
 
 public class cl_main {
 	
@@ -26,7 +26,7 @@ public class cl_main {
 	
 	final static String gc_kmeans_scan 	= "LOG_KMEANS_SCAN_PORT";
 	
-	final static String gc_totais 	    = "LOG_TOTAIS1";//"LOG_TOTAIS";
+	final static String gc_totais 	    = "LOG_TOTAIS";
 	
 	final static String gc_conn_ip 		= "CONN_IP1";
 	
@@ -41,6 +41,8 @@ public class cl_main {
 	final static String gc_tcp 			= "tcp";
 	
 	final static String gc_udp 			= "udp";
+	
+	final static String gc_ts 			= "TS";
 	
 	//---------ATRIBUTOS---------//
 	
@@ -66,9 +68,7 @@ public class cl_main {
 	
 	private cl_processa go_processa;
 	
-	private cl_seleciona go_select;
-			
-	private cl_pesquisa_ip go_ip;
+	private cl_seleciona go_select;				
 	
 	//---------METODOS---------//
 	
@@ -130,9 +130,9 @@ public class cl_main {
 			
 			lo_kmeans.m_start_kmeans_ddos(gv_session, gt_data, gc_http );
 			
-			//lo_kmeans.m_start_kmeans_ddos(gv_session, gt_data, gc_ssl );
+			lo_kmeans.m_start_kmeans_ddos(gv_session, gt_data, gc_ssh );
 			
-			//lo_kmeans.m_start_kmeans_ddos(gv_session, gt_data, gc_ssh );
+			//lo_kmeans.m_start_kmeans_ddos(gv_session, gt_data, gc_ssl );						
 				
 			break;
 		
@@ -152,27 +152,29 @@ public class cl_main {
 			
 		case 8: //Get resultados
 			
-			cl_pesquisa_ip lo_ip = new cl_pesquisa_ip(gv_session, gv_stamp);
-			
 			Dataset<Row> lt_res;
-			
-			Dataset<Row> lt_ips;
-			
+						
 			String lv_stamp = "2018-12-05 12:20:00.000";
+			
+			String lc_format = "dd/MM/yyyy HH:mm";
 			
 			cl_util.m_time_start();
 			
+			//###########################################
 			//Totais
+			//###########################################			
 			
 			go_select.m_conf_phoenix(gc_totais, gv_session);
 			
-			lt_res = go_select.m_select_LogTotais(lv_stamp);
+			lt_res = go_select.m_select_LogTotais(lv_stamp);						
 			
-			go_processa.m_export_totais(lt_res);
-									
+			go_processa.m_export_totais(lt_res.withColumn(gc_ts, date_format(col(gc_ts), lc_format)).persist());//Exporta TS no formato correto
+			
+			//###########################################						
 			//Kmeans DDoS
+			//###########################################
 			
-			/*lo_kmeans = new cl_kmeans(gc_stamp, gv_stamp);
+			lo_kmeans = new cl_kmeans(gc_stamp, gv_stamp);
 			
 			lv_stamp = "2018-12-10 00:01:00.000";
 			
@@ -180,27 +182,20 @@ public class cl_main {
 						
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 									
-			lo_kmeans.m_export_kmeans_ddos(lt_res);*/
+			lo_kmeans.m_export_kmeans_ddos(lt_res.withColumn(gc_ts, date_format(col(gc_ts), lc_format)).persist());					
 			
-			/*lt_ips = lo_ip.m_processa_ip(lt_res.filter(col(cl_kmeans.gc_service).equalTo(gc_http))
-						  .filter(col(cl_kmeans.gc_prediction).equalTo("1"))
-					   	  , cl_kmeans.gc_resp_h);
-			
-			cl_util.m_show_dataset(lt_ips, "DDOs com IpInfo: ");*/
-			
-			//cl_util.m_save_csv(lt_ips, "DDoS_HTTP_IpInfo");	
-			
-			
+			//###########################################
 			//Kmeans Port Scan
+			//###########################################
 			
-			/*go_select.m_conf_phoenix(gc_kmeans_scan, gv_session);
+			go_select.m_conf_phoenix(gc_kmeans_scan, gv_session);
 			
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 			
-			lo_kmeans.m_export_kmeans_ScanPort(lt_res);
+			lo_kmeans.m_export_kmeans_ScanPort(lt_res.withColumn(gc_ts, date_format(col(gc_ts), lc_format)).persist());
 			
 			cl_util.m_time_end();
-			*/
+			
 			break;
 		
 		case 9:

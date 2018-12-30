@@ -244,7 +244,8 @@ public class cl_seleciona {
 			      .format(gc_phoenix)
 			      .options(gv_phoenix)							   
 			      .load()			      			      
-				  .filter(col("TS_CODE").gt(lv_stamp))
+				  .filter(col(gc_tsc).gt(lv_stamp))
+				  .filter(col("TIPO").equalTo("RESP_H"))
 				  .persist(StorageLevel.MEMORY_ONLY());
 		
 			/*	  .filter(col("TIPO").equalTo("PROTO_SERVICE_ORIG_H"))

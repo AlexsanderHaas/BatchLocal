@@ -10,21 +10,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.functions;
-
-import IpInfo.cl_IpInfo;
-import IpInfo.cl_pesquisa_ip;
-import io.ipinfo.api.IPInfo;
-//import io.ipinfo.api.errors.RateLimitedException;
-import io.ipinfo.api.model.IPResponse;
-
-//import org.apache.spark.sql.Column;
-
-//import org.apache.spark.sql.Encoder;
-import org.apache.spark.sql.Encoders;
-
-/*import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.function.Function;
-import org.apache.spark.api.java.function.MapFunction;*/
+import org.apache.spark.storage.StorageLevel;
 
 public class cl_kmeans {
 	
@@ -163,7 +149,7 @@ public class cl_kmeans {
 		
 		cl_util.m_time_end();
 		
-		return lt_res;
+		return lt_res.persist(StorageLevel.MEMORY_ONLY());
 		
 	}
 		
@@ -243,7 +229,7 @@ public class cl_kmeans {
 		
 		cl_util.m_time_end();
 		
-		return lt_res;
+		return lt_res.persist(StorageLevel.MEMORY_ONLY());
 		
 	}
 	
@@ -326,7 +312,7 @@ public class cl_kmeans {
 	    //cl_util.m_show_dataset(lt_res, gv_tipo+lv_table);
 	    
 	    cl_util.m_save_log(lt_res, lv_table);    
-	    	    
+	    
 	    cl_util.m_time_end();
 	    	    	    
 	}

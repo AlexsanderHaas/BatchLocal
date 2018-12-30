@@ -363,7 +363,7 @@ public class cl_processa {
 	
 	public void m_export_totais(Dataset<Row> lt_data) {
 		
-		cl_util.m_save_csv(lt_data.filter(col(gc_tipo).equalTo(lc_proto))
+		/*cl_util.m_save_csv(lt_data.filter(col(gc_tipo).equalTo(lc_proto))
 								  .sort(gc_ts), lc_proto);
 		
 		m_export_pivot(lt_data, gc_proto, "", "", lc_proto); //Historico por TS da utilização de Protocolo
@@ -419,7 +419,7 @@ public class cl_processa {
 		
 		//-----------Conexões IP Resposta--------------------------------------//
 		
-		m_export_resp_h(lt_data);// Com o IpInfo
+		
 						
 		cl_util.m_save_csv(lt_data.filter(col(gc_tipo).equalTo(lc_resp_p))
 								  .sort(gc_ts, gc_resp_p), lc_resp_p);
@@ -437,7 +437,9 @@ public class cl_processa {
 								  .sort(gc_ts, gc_orig_h, gc_resp_h), lc_orig_h_resp_h);
 		
 		cl_util.m_save_csv(lt_data.filter(col(gc_tipo).equalTo(lc_orig_h_p_resp_h_p))
-								  .sort(gc_ts, gc_orig_h, gc_orig_p), lc_orig_h_p_resp_h_p);
+								  .sort(gc_ts, gc_orig_h, gc_orig_p), lc_orig_h_p_resp_h_p);*/
+		
+		m_export_resp_h(lt_data);// Com o IpInfo
 		
 	}
 	
@@ -461,11 +463,11 @@ public class cl_processa {
 					    .withColumnRenamed("sum(count)", gc_count)
 					    .sort(col(gc_count).desc());
 		
-		lo_ip.m_processa_ip(lt_ips.limit(10000), cl_kmeans.gc_resp_h, 400); //Consulta no WebService
+		lo_ip.m_processa_ip(lt_ips.limit(10000), cl_kmeans.gc_resp_h, 1000); //Consulta no WebService
 		
 		lt_filt = lo_ip.m_processa_ip(lt_filt, cl_kmeans.gc_resp_h, 0);//Consulta no HBase
 		
-		//cl_util.m_show_dataset(lt_filt, lc_resp_h+" com IpInfo: ");
+		cl_util.m_show_dataset(lt_filt, lc_resp_h+" com IpInfo: ");
 		
 		cl_util.m_save_csv(lt_filt.sort(col(gc_count).desc()), lc_resp_h+"_INFO_WEB");
 		

@@ -11,10 +11,7 @@ import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 
-import IpInfo.cl_pesquisa_ip;
-
-import static org.apache.spark.sql.functions.col;
-import static org.apache.spark.sql.functions.date_format;
+//import static org.apache.spark.sql.functions.date_format;
 
 public class cl_main {
 	
@@ -155,20 +152,18 @@ public class cl_main {
 			Dataset<Row> lt_res;
 						
 			String lv_stamp = "2018-12-05 12:20:00.000";
-			
-			String lc_format = "dd/MM/yyyy HH:mm";
-			
+									
 			cl_util.m_time_start();
 			
 			//###########################################
 			//Totais
 			//###########################################			
 			
-			go_select.m_conf_phoenix(gc_totais, gv_session);
+			/*go_select.m_conf_phoenix(gc_totais, gv_session);
 			
 			lt_res = go_select.m_select_LogTotais(lv_stamp);						
-			
-			go_processa.m_export_totais(lt_res.withColumn(gc_ts, date_format(col(gc_ts), lc_format)).persist());//Exporta TS no formato correto
+									
+			go_processa.m_export_totais(lt_res);*/
 			
 			//###########################################						
 			//Kmeans DDoS
@@ -182,7 +177,7 @@ public class cl_main {
 						
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 									
-			lo_kmeans.m_export_kmeans_ddos(lt_res.withColumn(gc_ts, date_format(col(gc_ts), lc_format)).persist());					
+			lo_kmeans.m_export_kmeans_ddos(lt_res);					
 			
 			//###########################################
 			//Kmeans Port Scan
@@ -192,7 +187,7 @@ public class cl_main {
 			
 			lt_res = go_select.m_select_LogKmeans(lv_stamp);
 			
-			lo_kmeans.m_export_kmeans_ScanPort(lt_res.withColumn(gc_ts, date_format(col(gc_ts), lc_format)).persist());
+			lo_kmeans.m_export_kmeans_ScanPort(lt_res);
 			
 			cl_util.m_time_end();
 			

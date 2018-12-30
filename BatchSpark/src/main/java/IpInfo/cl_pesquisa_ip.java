@@ -101,7 +101,7 @@ public class cl_pesquisa_ip {
 		   lv_free   > 0 &&
 		   lv_limite > 0) { //Se não encontrou tudo na tabela pesquisa no Web Service os que faltam
 			
-			//System.out.println("\n Pesquisa no WEB Service: " + lv_nf);
+			System.out.println("\n Pesquisa no WEB Service: " + lv_nf);
 			
 			if(lv_limite < lv_free) {
 			
